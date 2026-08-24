@@ -15,8 +15,21 @@ export const THIN = "\u2009"; // espace fine sécable (repli éventuel)
 /* Par défaut 3 caractères ; `contextLength` permet d'élargir.         */
 /* ------------------------------------------------------------------ */
 
+// Fin de mot ou de groupe.
+const WORD_END = "[A-Za-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF0-9)\\]}\"'\u2019\u201D\u203A\u2026\u00BB%]";
+const WORD_END_NO_DIGIT =
+  "[A-Za-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF)\\]}\"'\u2019\u201D\u203A\u2026\u00BB]";
+
+// Marqueurs fermants qui peuvent s'intercaler entre le mot et la ponctuation :
+// *italique*, **gras**, __souligné__, `code`, ~~barré~~, ==surligné==, </u>…
+// La ponctuation se place APRÈS eux : « *nude code*[fine]? ».
+const CLOSING_MARKUP = "(?:<\\/[a-zA-Z][\\w-]*>|[*_~=`^])*";
+
 // Fin de mot / de groupe : on insère l'espace.
-const AFTER_WORD = /[A-Za-zÀ-ÖØ-öø-ÿ0-9)\]}"'’…»%]$/;
+const AFTER_WORD = new RegExp(WORD_END + CLOSING_MARKUP + "$");
+
+// Définition de note de bas de page ou de lien : « [^1]: », « [ref]: ».
+const LINK_DEFINITION = /(?:^|\n)[ \t]*\[[^\]\n]*\]$/;
 
 // Une espace ordinaire précède : on la remplace par l'insécable.
 // (\s couvre déjà U+00A0 et U+202F en JS, donc les insécables sont exclues.)
@@ -95,10 +108,10 @@ export const frenchColonRules: InputRule[] = [
     from: ":",
     // Pas de chiffre dans la classe : « 12:30 » et « 1:2 » sont épargnés.
     to: (s) => s.frNbSpace + ":",
-    contextMatch: /[A-Za-zÀ-ÖØ-öø-ÿ)\]}"'’…»]$/,
+    contextMatch: new RegExp(WORD_END_NO_DIGIT + CLOSING_MARKUP + "$"),
     contextLength: URI_LOOKBEHIND,
     contextExclude: new RegExp(
-      URL_SCHEME.source + "|" + INSIDE_URI.source,
+      [URL_SCHEME.source, INSIDE_URI.source, LINK_DEFINITION.source].join("|"),
       "i"
     ),
   },
