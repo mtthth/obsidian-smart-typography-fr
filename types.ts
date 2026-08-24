@@ -16,4 +16,16 @@ export interface SmartTypographySettings {
   closeGuillemet: string;
   leftArrow: string;
   rightArrow: string;
+
+  // --- Portee ---
+  limitToFolders: boolean;
+  includedFolders: string[];
+
+  // --- Typographie francaise ---
+  frenchSpacing: boolean;
+  frenchColon: boolean;
+  frenchGuillemets: boolean;
+  frenchPercent: boolean;
+  frNarrowSpace: string;
+  frNbSpace: string;
 }

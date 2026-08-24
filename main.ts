@@ -1,4 +1,5 @@
 import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
+import * as obsidianApi from "obsidian";
 import {
   ChangeSpec,
   EditorSelection,
@@ -18,6 +19,17 @@ import {
   guillemetRules,
   smartQuoteRules,
 } from "inputRules";
+import {
+  FINE,
+  NBSP,
+  THIN,
+  frenchAngleGuillemetRules,
+  frenchColonRules,
+  frenchGuardRules,
+  frenchGuillemetRules,
+  frenchPercentRules,
+  frenchStopRules,
+} from "frenchRules";
 import {
   LegacyInputRule,
   legacyArrowRules,
@@ -53,6 +65,16 @@ const DEFAULT_SETTINGS: SmartTypographySettings = {
 
   leftArrow: "←",
   rightArrow: "→",
+
+  limitToFolders: false,
+  includedFolders: [],
+
+  frenchSpacing: false,
+  frenchColon: true,
+  frenchGuillemets: true,
+  frenchPercent: true,
+  frNarrowSpace: FINE,
+  frNbSpace: NBSP,
 };
 
 export default class SmartTypography extends Plugin {
@@ -62,11 +84,32 @@ export default class SmartTypography extends Plugin {
 
   legacyInputRules: LegacyInputRule[];
   legacyLastUpdate: WeakMap<CodeMirror.Editor, LegacyInputRule>;
+  scopeFolders: string[] = [];
 
   buildInputRules() {
     this.legacyInputRules = [];
     this.inputRules = [];
     this.inputRuleMap = {};
+
+    // --- Typographie francaise -------------------------------------------
+    // En tete : les regles << / >> francaises doivent primer sur
+    // guillemetRules, qui partagent les memes declencheurs.
+    if (this.settings.frenchSpacing) {
+      this.inputRules.push(...frenchGuardRules, ...frenchStopRules);
+
+      if (this.settings.frenchGuillemets) {
+        this.inputRules.push(...frenchGuillemetRules);
+        if (this.settings.guillemets) {
+          this.inputRules.push(...frenchAngleGuillemetRules);
+        }
+      }
+      if (this.settings.frenchColon) {
+        this.inputRules.push(...frenchColonRules);
+      }
+      if (this.settings.frenchPercent) {
+        this.inputRules.push(...frenchPercentRules);
+      }
+    }
 
     if (this.settings.emDash) {
       if (this.settings.skipEnDash) {
@@ -107,6 +150,10 @@ export default class SmartTypography extends Plugin {
       this.inputRules.push(...fractionRules);
     }
 
+    this.scopeFolders = (this.settings.includedFolders || [])
+      .map((f) => f.trim().replace(/^\/+|\/+$/g, ""))
+      .filter((f) => f.length > 0);
+
     this.inputRules.forEach((rule) => {
       if (this.inputRuleMap[rule.trigger] === undefined) {
         this.inputRuleMap[rule.trigger] = [];
@@ -114,6 +161,28 @@ export default class SmartTypography extends Plugin {
 
       this.inputRuleMap[rule.trigger].push(rule);
     });
+  }
+
+  // --- Portee par dossier ------------------------------------------------
+
+  isPathInScope(path?: string | null): boolean {
+    if (!this.settings.limitToFolders) return true;
+    if (!path || this.scopeFolders.length === 0) return false;
+    return this.scopeFolders.some(
+      (f) => path === f || path.startsWith(f + "/")
+    );
+  }
+
+  // editorInfoField n'existe que sur les versions recentes d'Obsidian ;
+  // on retombe sinon sur le fichier actif.
+  currentFilePath(state?: any): string | null {
+    const field = (obsidianApi as any).editorInfoField;
+    if (field && state) {
+      const info = state.field(field, false);
+      if (info && info.file) return info.file.path;
+    }
+    const active = this.app.workspace.getActiveFile();
+    return active ? active.path : null;
   }
 
   async onload() {
@@ -156,6 +225,11 @@ export default class SmartTypography extends Plugin {
     this.registerEditorExtension([
       prevTransactionState,
       EditorState.transactionFilter.of((tr) => {
+        // Hors des dossiers selectionnes : on ne touche a rien
+        if (!this.isPathInScope(this.currentFilePath(tr.startState))) {
+          return tr;
+        }
+
         // Revert any stored changes on delete
         if (
           tr.isUserEvent("delete.backward") ||
@@ -204,7 +278,7 @@ export default class SmartTypography extends Plugin {
           reverts.push(revert);
         };
 
-        const contextCache: Record<number, string> = {};
+        const contextCache: Record<string, string> = {};
         let newSelection = tr.selection;
 
         tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
@@ -219,14 +293,25 @@ export default class SmartTypography extends Plugin {
             // If we're in a codeblock, etc, return early, no need to continue checking
             if (!canPerformReplacement(fromA)) return;
 
-            // Grab and cache three chars before the one being inserted
-            if (contextCache[fromA] === undefined) {
-              contextCache[fromA] = tr.newDoc.sliceString(fromB - 3, fromB);
+            // Fenetre de contexte en amont du caractere insere.
+            // 3 caracteres par defaut, plus si la regle le demande.
+            const ctxLen = rule.contextLength ?? 3;
+            const ctxKey = fromA + ":" + ctxLen;
+
+            if (contextCache[ctxKey] === undefined) {
+              contextCache[ctxKey] = tr.newDoc.sliceString(
+                Math.max(0, fromB - ctxLen),
+                fromB
+              );
             }
 
-            const context = contextCache[fromA];
+            const context = contextCache[ctxKey];
 
             if (!rule.contextMatch.test(context)) {
+              continue;
+            }
+
+            if (rule.contextExclude && rule.contextExclude.test(context)) {
               continue;
             }
 
@@ -303,6 +388,8 @@ export default class SmartTypography extends Plugin {
     instance: CodeMirror.Editor,
     delta: CodeMirror.EditorChangeCancellable
   ) => {
+    if (!this.isPathInScope(this.currentFilePath())) return;
+
     if (this.legacyLastUpdate.has(instance) && delta.origin === "+delete") {
       const revert = this.legacyLastUpdate.get(instance).performRevert;
 
@@ -394,6 +481,119 @@ class SmartTypographySettingTab extends PluginSettingTab {
     let { containerEl } = this;
 
     containerEl.empty();
+
+    new Setting(containerEl).setName("Portée").setHeading();
+
+    new Setting(containerEl)
+      .setName("Limiter à certains dossiers")
+      .setDesc(
+        "Le plugin n'intervient que dans les dossiers listés ci-dessous, sous-dossiers compris."
+      )
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.limitToFolders)
+          .onChange(async (value) => {
+            this.plugin.settings.limitToFolders = value;
+            await this.plugin.saveSettings();
+            this.display();
+          });
+      });
+
+    if (this.plugin.settings.limitToFolders) {
+      new Setting(containerEl)
+        .setName("Dossiers concernés")
+        .setDesc(
+          "Un chemin par ligne, relatif à la racine du coffre. Casse respectée. Liste vide = plugin inactif partout."
+        )
+        .addTextArea((ta) => {
+          ta.setPlaceholder("Écrits/Nouvelles\nÉditions Procuste")
+            .setValue(this.plugin.settings.includedFolders.join("\n"))
+            .onChange(async (value) => {
+              this.plugin.settings.includedFolders = value
+                .split("\n")
+                .map((s) => s.trim())
+                .filter((s) => s.length > 0);
+              await this.plugin.saveSettings();
+            });
+          ta.inputEl.rows = 6;
+          ta.inputEl.style.width = "100%";
+        });
+    }
+
+    new Setting(containerEl)
+      .setName("Typographie française")
+      .setHeading();
+
+    new Setting(containerEl)
+      .setName("Espaces avant la ponctuation double")
+      .setDesc(
+        "Insère une espace fine insécable (U+202F) devant ; ! ? et »"
+      )
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.frenchSpacing)
+          .onChange(async (value) => {
+            this.plugin.settings.frenchSpacing = value;
+            await this.plugin.saveSettings();
+            this.display();
+          });
+      });
+
+    if (this.plugin.settings.frenchSpacing) {
+      new Setting(containerEl)
+        .setName("Caractère d'espace fine")
+        .setDesc(
+          "U+202F est la forme correcte. Basculez sur U+00A0 si votre police de travail ne la rend pas."
+        )
+        .addDropdown((dd) => {
+          dd.addOption(FINE, "Fine insécable (U+202F)")
+            .addOption(NBSP, "Insécable (U+00A0)")
+            .addOption(THIN, "Fine sécable (U+2009)")
+            .setValue(this.plugin.settings.frNarrowSpace)
+            .onChange(async (value) => {
+              this.plugin.settings.frNarrowSpace = value;
+              await this.plugin.saveSettings();
+            });
+        });
+
+      new Setting(containerEl)
+        .setName("Deux-points")
+        .setDesc(
+          "Espace insécable pleine (U+00A0) devant « : », conformément à l'usage de l'Imprimerie nationale. À désactiver si vous saisissez souvent des URL, des heures ou des champs Dataview."
+        )
+        .addToggle((toggle) => {
+          toggle
+            .setValue(this.plugin.settings.frenchColon)
+            .onChange(async (value) => {
+              this.plugin.settings.frenchColon = value;
+              await this.plugin.saveSettings();
+            });
+        });
+
+      new Setting(containerEl)
+        .setName("Guillemets")
+        .setDesc("Espace fine après « et avant »")
+        .addToggle((toggle) => {
+          toggle
+            .setValue(this.plugin.settings.frenchGuillemets)
+            .onChange(async (value) => {
+              this.plugin.settings.frenchGuillemets = value;
+              await this.plugin.saveSettings();
+            });
+        });
+
+      new Setting(containerEl)
+        .setName("Pourcentages")
+        .setDesc("Espace insécable entre le nombre et le signe % (50 %)")
+        .addToggle((toggle) => {
+          toggle
+            .setValue(this.plugin.settings.frenchPercent)
+            .onChange(async (value) => {
+              this.plugin.settings.frenchPercent = value;
+              await this.plugin.saveSettings();
+            });
+        });
+    }
 
     new Setting(containerEl)
       .setName("Curly Quotes")

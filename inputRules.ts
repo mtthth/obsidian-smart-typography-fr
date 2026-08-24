@@ -5,6 +5,10 @@ export interface InputRule {
   contextMatch: RegExp;
   from: string;
   to: string | ((settings: SmartTypographySettings) => string);
+  // Taille de la fenetre de contexte examinee en amont (defaut : 3)
+  contextLength?: number;
+  // Veto : si ce motif correspond au contexte, la regle ne s'applique pas
+  contextExclude?: RegExp;
 }
 
 // Dashes

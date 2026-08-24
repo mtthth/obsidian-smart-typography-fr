@@ -1,10 +1,10 @@
 {
-	"id": "obsidian-smart-typography",
-	"name": "Smart Typography",
+	"id": "smart-typography-fr",
+	"name": "Smart Typography FR",
 	"version": "1.0.18",
 	"minAppVersion": "0.15.0",
-	"description": "Converts quotes to curly quotes, dashes to em dashes, and periods to ellipses",
-	"author": "mgmeyers",
+	"description": "Typographie intelligente avec espaces insécables françaises, limitée aux dossiers choisis. Fork de Smart Typography 1.0.18 (mgmeyers).",
+	"author": "mgmeyers (fork)",
 	"authorUrl": "https://github.com/mgmeyers/obsidian-smart-typography",
 	"isDesktopOnly": false
 }
