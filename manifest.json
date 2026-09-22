@@ -3,8 +3,8 @@
 	"name": "Smart Typography FR",
 	"version": "1.0.18",
 	"minAppVersion": "0.15.0",
-	"description": "Typographie intelligente avec espaces insécables françaises, limitée aux dossiers choisis. Fork de Smart Typography 1.0.18 (mgmeyers).",
-	"author": "mgmeyers (fork)",
-	"authorUrl": "https://github.com/mgmeyers/obsidian-smart-typography",
+	"description": "Typographie intelligente avec espaces insécables françaises, limitée aux dossiers choisis. D'après Smart Typography de mgmeyers.",
+	"author": "Matthieu Thomas (cidrolin)",
+	"authorUrl": "https://github.com/mtthth",
 	"isDesktopOnly": false
 }

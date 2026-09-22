@@ -1,9 +1,10 @@
 # Smart Typography FR
 
-Fork de `mgmeyers/obsidian-smart-typography` **1.0.18**, compilé avec les
-sources amont d'origine (rollup + TypeScript 5.4). L'historique amont est
-conservé : le fork part du tag `1.0.18`, et le dépôt d'origine est déclaré
-comme remote `upstream`.
+Par Matthieu Thomas (cidrolin), sur une idée de mgmeyers : ce plugin est un
+fork de son [Smart Typography](https://github.com/mgmeyers/obsidian-smart-typography)
+**1.0.18**, dont il reprend le code. L'historique amont est conservé : le
+fork part du tag `1.0.18`, et le dépôt d'origine est déclaré comme remote
+`upstream`.
 
 ## Installation
 
@@ -110,3 +111,24 @@ git diff 1.0.18 HEAD --output=smart-typography-fr.patch -- main.ts types.ts inpu
 Passez par `--output` plutôt que par une redirection `>` : PowerShell
 réécrirait les fins de ligne, et les morceaux de `main.ts` et `manifest.json`
 (en CRLF dans le dépôt amont) ne s'appliqueraient plus.
+
+Le tag `1.0.18` vient du dépôt amont. Sur un nouveau clone, récupérez-le
+d'abord :
+
+```bash
+git remote add upstream https://github.com/mgmeyers/obsidian-smart-typography
+git fetch upstream --tags
+```
+
+## Licence
+
+GPL-3.0 (voir [LICENSE.md](LICENSE.md)), comme le plugin d'origine dont ce
+fork reprend le code.
+
+- Smart Typography : © 2021-2022 mgmeyers.
+- Modifications : © 2026 Matthieu Thomas (cidrolin). Portée par dossier et
+  typographie française, ajoutées à partir du 24 août 2026 dans `main.ts`,
+  `types.ts`, `inputRules.ts` et `manifest.json`.
+- `frenchRules.ts`, écrit pour ce fork, est en outre disponible sous
+  licence MIT (texte en tête du fichier) : vous pouvez le réutiliser
+  ailleurs sous l'une ou l'autre licence.
