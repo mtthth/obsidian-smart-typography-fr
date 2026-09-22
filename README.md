@@ -98,8 +98,10 @@ effet sur `main.js`.
 `smart-typography-fr.patch` rassemble tout ce que le fork change dans le
 code amont : les quatre fichiers touchés (`main.ts`, `types.ts`,
 `inputRules.ts`, `manifest.json`) plus le nouveau `frenchRules.ts`. Il
-s'applique sur un clone du tag `1.0.18` avec `git apply`. Pour le
-régénérer après une modification :
+s'applique sur un clone du tag `1.0.18` avec `git apply`, mais ne suffit
+pas à compiler : il laisse de côté `package.json`, et un clone amont bute
+sur npm 12 et TS 4.2. Pour compiler, partez de ce dépôt. Pour régénérer
+le patch une fois les modifications commitées :
 
 ```bash
 git diff 1.0.18 HEAD --output=smart-typography-fr.patch -- main.ts types.ts inputRules.ts manifest.json frenchRules.ts
