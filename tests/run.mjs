@@ -1,4 +1,4 @@
-// Tests des fonctions pures (fixTypography.ts, frenchRules.ts), sans Obsidian :
+// Tests des fonctions pures (fixTypography.ts, frenchRules.ts, languages.ts), sans Obsidian :
 // TypeScript, déjà présent, transpile les modules, dont les imports « nus »
 // (baseUrl) sont réécrits en chemins relatifs.
 import ts from "typescript";
@@ -10,21 +10,23 @@ const root = path.resolve(import.meta.dirname, "..");
 const out = path.join(root, "tests", ".tmp");
 mkdirSync(out, { recursive: true });
 
-for (const name of ["fixTypography", "frenchRules"]) {
+for (const name of ["fixTypography", "frenchRules", "languages"]) {
 	const source = readFileSync(path.join(root, `${name}.ts`), "utf8");
 	const js = ts.transpileModule(source, {
 		compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 },
-	}).outputText.replace(/from "(frenchRules|fixTypography)"/g, 'from "./$1.mjs"');
+	}).outputText.replace(/from "(frenchRules|fixTypography|languages)"/g, 'from "./$1.mjs"');
 	writeFileSync(path.join(out, `${name}.mjs`), js);
 }
 
-const { applyFrenchTypography, findFaultySigns, frontmatterDisablesCheck } = await import(pathToFileURL(path.join(out, "fixTypography.mjs")).href);
+const { applyTypography, findFaultySigns, noteTypo } = await import(pathToFileURL(path.join(out, "fixTypography.mjs")).href);
+const { detectLanguage } = await import(pathToFileURL(path.join(out, "languages.mjs")).href);
 const { FINE, NBSP, THIN } = await import(pathToFileURL(path.join(out, "frenchRules.mjs")).href);
 
 const settings = (over = {}) => ({
 	curlyQuotes: true,
 	ellipsis: true,
 	closeSingle: "’",
+	frenchSpacing: true,
 	frenchColon: true,
 	frenchGuillemets: true,
 	frenchPercent: true,
@@ -43,8 +45,10 @@ const check = (name, actual, expected) => {
 };
 const section = (t) => console.log(`\n--- ${t} ---`);
 
-const typo = (input, expected, name, s = settings()) => check(name, applyFrenchTypography(input, s), expected);
-const unchanged = (input, name, s = settings()) => check(name, applyFrenchTypography(input, s), input);
+const lang = (code) => ({ forced: code, fallback: code });
+const FR = lang("fr");
+const typo = (input, expected, name, s = settings()) => check(name, applyTypography(input, s, FR), expected);
+const unchanged = (input, name, s = settings()) => check(name, applyTypography(input, s, FR), input);
 
 section("Correction");
 typo("Bonjour ; ça va ?", `Bonjour${FINE}; ça va${FINE}?`, "fine insécable avant ; et ?");
@@ -99,12 +103,13 @@ typo("Voir [ceci]: cela", `Voir [ceci]${NBSP}: cela`, "hors début de ligne, ce 
 
 section("Correction : idempotence et intégrité");
 const sample = "Il a dit \"bonjour\" ; puis : \"quoi ?\"... l'ami, à 12:30 sur https://x.fr/?a=1\nEt `du code ;` fin !";
-const once = applyFrenchTypography(sample, settings());
-check("relancer la correction ne change plus rien", applyFrenchTypography(once, settings()), once);
+const once = applyTypography(sample, settings(), FR);
+check("relancer la correction ne change plus rien", applyTypography(once, settings(), FR), once);
 check("aucune ligne perdue", once.split("\n").length, sample.split("\n").length);
 
 section("Repérage des espacements fautifs");
-const signs = (text, expected, name, s = settings()) => check(name, findFaultySigns(text, s), expected);
+const signs = (text, expected, name, s = settings()) =>
+	check(name, findFaultySigns(text, s, FR).map(({ pos, side }) => [pos, side]), expected);
 signs("Bonjour !", [[8, "before"]], "espace ordinaire devant !");
 signs("Bonjour!", [[7, "before"]], "espace absente devant !");
 signs(`Bonjour${FINE}!`, [], "fine présente : rien");
@@ -122,13 +127,100 @@ signs("voir ![[a.png]]", [], "intégration épargnée");
 signs("Attention : 50 %", [], "deux-points et pourcentage coupés : plus rien à signaler", settings({ frenchColon: false, frenchPercent: false, frenchGuillemets: false }));
 signs("Attention : « x »", [[10, "before"]], "seul le deux-points reste signalé quand les guillemets sont coupés", settings({ frenchGuillemets: false, frenchPercent: false }));
 
-section("Propriété typo-fr");
-const off = (fm, expected, name) => check(name, frontmatterDisablesCheck(fm), expected);
-off("---\ntypo-fr: false\n---", true, "typo-fr: false");
-off("---\ntitre: x\ntypo-fr: False # non\n---", true, "casse et commentaire");
-off("---\ntypo-fr: true\n---", false, "typo-fr: true");
-off("---\ntitre: x\n---", false, "propriété absente");
-off("---\nautre-typo-fr: false\n---", false, "clé voisine ignorée");
+section("Propriété smart-typo");
+const note = (doc, expected, name, def = "fr") => {
+	const { disabled, forced, fallback } = noteTypo(doc, def);
+	check(name, { disabled, forced, fallback }, expected);
+};
+note("---\nsmart-typo: false\n---\nTexte", { disabled: true, forced: null, fallback: "fr" }, "smart-typo: false");
+note("---\ntitre: x\nsmart-typo: False # non\n---\n", { disabled: true, forced: null, fallback: "fr" }, "casse et commentaire");
+note("---\nsmart-typo: en\n---\nTexte", { disabled: false, forced: "en", fallback: "en" }, "langue imposée");
+note('---\nsmart-typo: "de-DE"\n---\n', { disabled: false, forced: "de", fallback: "de" }, "code régional ramené à sa langue");
+note("---\nautre-smart-typo: false\n---\n", { disabled: false, forced: null, fallback: "fr" }, "clé voisine ignorée");
+note("---\ntitre: x\n---\nI don't know what to do with this, but it is fine.", { disabled: false, forced: null, fallback: "en" }, "langue détectée sur le corps");
+note("Bonjour", { disabled: false, forced: null, fallback: "it" }, "texte trop court : langue par défaut", "it");
+
+section("Détection de la langue");
+const detect = (text, expected) => check(`${expected} : ${text}`, detectLanguage(text), expected);
+detect("Il a dit qu'il viendrait demain, mais il n'est pas venu.", "fr");
+detect("I don't know what to do with this.", "en");
+detect("Ich weiß nicht, was ich tun soll.", "de");
+detect("Я не знаю, что делать.", "ru");
+detect("Bugün hava çok güzel ve ben mutluyum.", "tr");
+detect("Non so cosa fare, ma è molto bello.", "it");
+detect("¿Qué vas a hacer cuando llegue el verano?", "es");
+detect("Bonjour", null);
+
+section("Couche universelle");
+const universal = (input, expected, name) => typo(input, expected, name);
+universal("bla ( attire .", "bla (attire.", "espace après ( et avant .");
+universal("un mot ) fin", "un mot) fin", "espace avant )");
+universal("Salut , ça va", "Salut, ça va", "espace avant la virgule");
+universal("mot,suite", "mot, suite", "virgule collée");
+universal("3,5 et 12.5 et a.md", "3,5 et 12.5 et a.md", "décimales et extensions épargnées");
+universal("Ah ... fin", "Ah … fin", "points de suspension épargnés");
+universal("mot - mot", "mot – mot", "trait d'union entre espaces → tiret");
+universal("- item\n| a | - |", "- item\n| a | - |", "puce et cellule de tableau épargnées");
+const uni = (text, expected, name, ctx = FR, s = settings()) =>
+	check(name, findFaultySigns(text, s, ctx).map(({ pos, side, reason }) => [pos, side, reason]), expected);
+uni("bla bla ( attire .", [[8, "after", "space"], [17, "before", "space"]], "repères sur ( et .");
+uni("un mot ) fin", [[7, "before", "space"]], "repère sur )");
+uni("mot,suite", [[3, "after", "space"]], "repère sur la virgule collée");
+uni("(bien) fait, ok.", [], "texte correct : rien");
+uni("Il a dit \"non\" et l'a fait", [[9, "on", "quote"], [13, "on", "quote"], [19, "on", "quote"]], "guillemets et apostrophes droits");
+uni("voir `a ( b` et https://x.fr/?q='1'", [], "code et URL protégés");
+uni("`code` .", [], "espace collée à une portion protégée");
+uni("mot - mot", [[4, "on", "dash"]], "repère sur le trait d'union");
+uni("- item\n| a | - |", [], "puce et tableau sans repère");
+
+section("Espaces doublées");
+universal("Deux  espaces,   trois", "Deux espaces, trois", "espaces doublées réduites");
+universal("Fin.  Début", "Fin. Début", "double espace après un point");
+universal("| a  | b   |\n|----|-----|\n| c  | d   |", "| a  | b   |\n|----|-----|\n| c  | d   |", "tableau épargné");
+universal("a  | b\n---|---\nc  | d", "a  | b\n---|---\nc  | d", "tableau sans bordure épargné");
+universal("x  | y", "x | y", "barre isolée : pas un tableau");
+universal("1.  item\n-  item\n- [ ]  tâche\n>  citation", "1.  item\n-  item\n- [ ]  tâche\n>  citation", "puces et citations alignées épargnées");
+universal("    indenté\nfin de ligne  \nsuite", "    indenté\nfin de ligne  \nsuite", "indentation et saut de ligne Markdown épargnés");
+universal("voir `a  b`  et", "voir `a  b`  et", "code et espace collée au code épargnés");
+uni("Deux  espaces", [[5, "on", "double-space"]], "repère sur l'espace en trop");
+uni("| a  | b |\n|---|---|", [], "tableau sans repère");
+uni("mot  ;", [[5, "before", "nbsp"]], "devant la ponctuation, seule sa règle signale");
+
+section("Règles par langue : correction");
+const typoIn = (code, input, expected, name) => check(`${code} : ${name}`, applyTypography(input, settings(), lang(code)), expected);
+typoIn("en", "Hello ! How are you ?", "Hello! How are you?", "pas d'espace avant ! ?");
+typoIn("en", "Note : see ; here", "Note: see; here", "pas d'espace avant : ;");
+typoIn("en", "Hi :) and | :--- |", "Hi :) and | :--- |", "émoticône et alignement de tableau épargnés");
+typoIn("en", 'Say "hi", it\'s 50 %', "Say “hi”, it’s 50%", "guillemets anglais, apostrophe, 50%");
+typoIn("de", 'Er sagte "Hallo".', "Er sagte „Hallo“.", "guillemets allemands");
+typoIn("de", "Er sagte “Hallo”.", "Er sagte „Hallo“.", "guillemets anglais → allemands");
+typoIn("de", "z.B. 50%", `z.${FINE}B. 50${NBSP}%`, "abréviation et pourcentage");
+typoIn("ru", "« Привет » - сказал он ?", "«Привет» — сказал он?", "ёлочки serrées, tiret cadratin");
+typoIn("ru", '"Привет"', "«Привет»", "guillemets droits → ёлочки");
+typoIn("tr", "yüzde 50 % ve 12%", "yüzde %50 ve %12", "% avant le nombre");
+typoIn("it", "E' vero, « ciao », 50 %", "È vero, «ciao», 50%", "È, caporali serrés, 50%");
+typoIn("es", "¿ Qué ? 50%", `¿Qué? 50${NBSP}%`, "¿ serré, 50 %");
+typoIn("es", '"hola"', "«hola»", "comillas latinas");
+check("ligne à ligne : français puis anglais",
+	applyTypography("Il a dit qu'il viendrait, mais il n'est pas venu ?\nI don't know what to do with this ?", settings(), { forced: null, fallback: "fr" }),
+	`Il a dit qu’il viendrait, mais il n’est pas venu${FINE}?\nI don’t know what to do with this?`);
+
+section("Règles par langue : repérage");
+const signsIn = (code, text, expected, name) => uni(text, expected, `${code} : ${name}`, lang(code));
+signsIn("en", "Hello !", [[6, "before", "no-space"]], "espace avant !");
+signsIn("en", "50 %", [[3, "before", "percent-none"]], "espace avant %");
+signsIn("en", "Hi :) | :--- |", [], "émoticône et tableau épargnés");
+signsIn("de", "Er sagte “Hallo”.", [[15, "on", "de-quote"]], "guillemet fermant anglais");
+signsIn("de", "z.B. hier", [[1, "after", "de-abbr"]], "abréviation serrée");
+signsIn("de", "50%", [[2, "before", "nbsp"]], "pourcentage collé");
+signsIn("ru", "« Привет »", [[0, "after", "no-space"], [9, "before", "no-space"]], "espaces dans les ёлочки");
+signsIn("tr", "yüzde 50%", [[8, "on", "percent-tr"]], "% après le nombre");
+signsIn("it", "E' vero", [[0, "on", "it-e"], [1, "on", "quote"]], "E' pour È");
+signsIn("es", "Qué pasa?", [[8, "on", "es-inverted"]], "¿ manquant");
+signsIn("es", "¡Hola! ¿Qué tal? Sí.", [], "ouvrants présents");
+check("repérage ligne à ligne",
+	findFaultySigns("Il a dit qu’il viendrait, mais il n’est pas venu ?\nI don’t know what to do with this ?", settings(), { forced: null, fallback: "fr" }).map(({ reason, lang }) => [reason, lang]),
+	[["nbsp", "fr"], ["no-space", "en"]]);
 
 if (failures.length === 0) {
 	console.log("\nTous les tests passent.");

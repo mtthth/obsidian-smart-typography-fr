@@ -1,5 +1,5 @@
 /*
- * Smart Typography FR : repère rouge des espacements fautifs dans l'éditeur.
+ * Smart Typography FR : repère rouge des fautes de typographie dans l'éditeur.
  * Copyright (c) 2026 Matthieu Thomas (cidrolin)
  *
  * SPDX-License-Identifier: GPL-3.0-only OR MIT
@@ -14,22 +14,46 @@ import {
   ViewUpdate,
 } from "@codemirror/view";
 import {
+  NoteTypo,
+  SignReason,
   SignSide,
   findFaultySigns,
-  frontmatterDisablesCheck,
+  noteTypo,
 } from "fixTypography";
+import { LANG_NAMES, Lang } from "languages";
 import { SmartTypographySettings } from "types";
 
 const MARKER_CLASSES: Record<SignSide, string> = {
   before: "smart-typography-fr-marker-before",
   after: "smart-typography-fr-marker-after",
+  on: "smart-typography-fr-marker-on",
 };
 
 // Info-bulle portée par le signe lui-même : elle s'affiche au survol du signe
 // comme du caret dessiné contre lui.
-const MARKER_ATTRIBUTES = {
-  title: "Espacement fautif : une espace insécable est attendue ici.",
+// La langue reconnue pour la ligne y est ajoutée.
+const MARKER_TITLES: Record<SignReason, string> = {
+  nbsp: "Espace insécable attendue ici.",
+  space: "Espace en trop ou manquante ici.",
+  quote: "Guillemet ou apostrophe droit : préférer la forme typographique.",
+  dash: "Trait d'union entre espaces : un tiret est attendu (– ou —).",
+  "double-space": "Espace doublée.",
+  "no-space": "Pas d'espace ici dans cette langue.",
+  "percent-none": "Pas d'espace entre le nombre et %.",
+  "percent-tr": "Le signe % précède le nombre : %50.",
+  "es-inverted": "Il manque le ¿ ou le ¡ d'ouverture.",
+  "de-quote": "Guillemet fermant allemand : “ et non ”.",
+  "de-abbr": "Abréviation : espace attendue (z. B.).",
+  "it-e": "« E' » s'écrit « È ».",
 };
+
+// Début de la note, métadonnées comprises, d'où sont tirées la propriété
+// smart-typo et la langue dominante.
+const NOTE_HEAD = 40000;
+
+export function noteTypoOf(state: EditorState, defaultLang: Lang): NoteTypo {
+  return noteTypo(state.doc.sliceString(0, NOTE_HEAD), defaultLang);
+}
 
 type TextRange = { from: number; to: number };
 
@@ -84,13 +108,9 @@ export function createSpacingMarkerPlugin(
     if (!isInScope(view.state)) return builder.finish();
 
     const settings = getSettings();
+    const note = noteTypoOf(view.state, settings.defaultLanguage);
+    if (note.disabled) return builder.finish();
     const fmEnd = frontmatterEnd(view.state);
-    if (
-      fmEnd > 0 &&
-      frontmatterDisablesCheck(view.state.doc.sliceString(0, fmEnd))
-    ) {
-      return builder.finish();
-    }
 
     for (const { from, to } of visibleLineRanges(view)) {
       if (to <= fmEnd) continue;
@@ -98,13 +118,19 @@ export function createSpacingMarkerPlugin(
       // entières, ce dont dépendent les motifs ancrés sur ^ et $.
       const base = Math.max(from, fmEnd);
       const text = view.state.doc.sliceString(base, to);
-      for (const [sign, side] of findFaultySigns(text, settings)) {
+      for (const { pos, side, reason, lang } of findFaultySigns(
+        text,
+        settings,
+        note
+      )) {
         builder.add(
-          base + sign,
-          base + sign + 1,
+          base + pos,
+          base + pos + 1,
           Decoration.mark({
             class: MARKER_CLASSES[side],
-            attributes: MARKER_ATTRIBUTES,
+            attributes: {
+              title: `${MARKER_TITLES[reason]} (${LANG_NAMES[lang]})`,
+            },
           })
         );
       }

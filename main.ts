@@ -5,6 +5,7 @@ import {
   Plugin,
   PluginSettingTab,
   Setting,
+  SuggestModal,
   TFile,
 } from "obsidian";
 import * as obsidianApi from "obsidian";
@@ -48,11 +49,15 @@ import {
   legacySmartQuoteRules,
 } from "legacyInputRules";
 import { Extension } from "@codemirror/state";
+import { TYPO_KEY, applyTypography, noteTypo } from "fixTypography";
+import { createSpacingMarkerPlugin, noteTypoOf } from "spacingMarkers";
 import {
-  NO_CHECK_KEY,
-  applyFrenchTypography,
-} from "fixTypography";
-import { createSpacingMarkerPlugin } from "spacingMarkers";
+  LANGS,
+  LANG_NAMES,
+  Lang,
+  detectLanguage,
+  parseTypoSetting,
+} from "languages";
 import { syntaxTree } from "@codemirror/language";
 import * as cmLanguage from "@codemirror/language";
 
@@ -89,6 +94,7 @@ const DEFAULT_SETTINGS: SmartTypographySettings = {
   frenchGuillemets: true,
   frenchPercent: true,
   flagWrongSpaces: true,
+  defaultLanguage: "fr",
   frNarrowSpace: FINE,
   frNbSpace: NBSP,
 };
@@ -101,6 +107,9 @@ export default class SmartTypography extends Plugin {
   legacyInputRules: LegacyInputRule[];
   legacyLastUpdate: WeakMap<CodeMirror.Editor, LegacyInputRule>;
   scopeFolders: string[] = [];
+  // Règles de saisie françaises : elles ne jouent que sur une ligne reconnue
+  // comme française.
+  frenchInputRules = new Set<InputRule>();
   // Tableau relu par Obsidian pour chaque éditeur : le modifier puis appeler
   // updateOptions() reconfigure les éditeurs ouverts sans recharger le plugin.
   private markerExtensions: Extension[] = [];
@@ -109,6 +118,13 @@ export default class SmartTypography extends Plugin {
     this.legacyInputRules = [];
     this.inputRules = [];
     this.inputRuleMap = {};
+    this.frenchInputRules = new Set([
+      ...frenchStopRules,
+      ...frenchGuillemetRules,
+      ...frenchAngleGuillemetRules,
+      ...frenchColonRules,
+      ...frenchPercentRules,
+    ]);
 
     // --- Typographie francaise -------------------------------------------
     // En tete : les regles << / >> francaises doivent primer sur
@@ -204,19 +220,25 @@ export default class SmartTypography extends Plugin {
     return active ? active.path : null;
   }
 
-  isCheckDisabled(file: TFile): boolean {
+  // Réglage de la note : langue imposée, false (non vérifiée) ou null.
+  noteSetting(file: TFile): Lang | false | null {
     const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
-    return fm?.[NO_CHECK_KEY] === false;
+    return parseTypoSetting(fm?.[TYPO_KEY]);
   }
 
-  // Pose `typo-fr: false` dans le YAML (le bloc est créé au besoin) ou retire
-  // la propriété ; la note modifiée recalcule d'elle-même ses repères.
-  async toggleCheck(file: TFile) {
-    const off = this.isCheckDisabled(file);
+  // Pose ou retire la propriété `smart-typo` (le bloc YAML est créé au
+  // besoin) ; la note modifiée recalcule d'elle-même ses repères.
+  async setNoteSetting(file: TFile, value: Lang | false | null) {
     await (this.app.fileManager as any).processFrontMatter(file, (fm: any) => {
-      if (off) delete fm[NO_CHECK_KEY];
-      else fm[NO_CHECK_KEY] = false;
+      if (value === null) delete fm[TYPO_KEY];
+      else fm[TYPO_KEY] = value;
     });
+  }
+
+  chooseNoteSetting(file: TFile) {
+    new TypoSettingModal(this.app, this.noteSetting(file), (value) =>
+      this.setNoteSetting(file, value)
+    ).open();
   }
 
   async onload() {
@@ -233,6 +255,17 @@ export default class SmartTypography extends Plugin {
       editorCallback: (editor: Editor) => this.fixTypography(editor),
     });
 
+    this.addCommand({
+      id: "choose-note-typography",
+      name: "Langue typographique de la note",
+      checkCallback: (checking: boolean) => {
+        const file = this.app.workspace.getActiveFile();
+        if (!file || file.extension !== "md") return false;
+        if (!checking) this.chooseNoteSetting(file);
+        return true;
+      },
+    });
+
     // Clic droit : l'entrée de correction n'apparaît que s'il y a une sélection.
     this.registerEvent(
       this.app.workspace.on("editor-menu", (menu, editor, info) => {
@@ -247,19 +280,18 @@ export default class SmartTypography extends Plugin {
 
         const file = (info as any)?.file;
         if (!file || file.extension !== "md") return;
-        if (!this.settings.frenchSpacing || !this.settings.flagWrongSpaces) {
-          return;
-        }
-        const off = this.isCheckDisabled(file);
+        const current = this.noteSetting(file);
+        const label =
+          current === false
+            ? "non vérifiée"
+            : current
+            ? LANG_NAMES[current]
+            : "automatique";
         menu.addItem((item) =>
           item
-            .setTitle(
-              off
-                ? "Réactiver le repérage des espacements"
-                : "Ne pas repérer les espacements dans cette note"
-            )
-            .setIcon(off ? "eye" : "eye-off")
-            .onClick(() => this.toggleCheck(file))
+            .setTitle(`Langue typographique de la note (${label})…`)
+            .setIcon("languages")
+            .onClick(() => this.chooseNoteSetting(file))
         );
       })
     );
@@ -355,6 +387,18 @@ export default class SmartTypography extends Plugin {
         const contextCache: Record<string, string> = {};
         let newSelection = tr.selection;
 
+        // Langue de la ligne où l'on tape, calculée seulement si une règle
+        // française est en jeu.
+        let note: ReturnType<typeof noteTypoOf> | null = null;
+        const languageAt = (pos: number): Lang => {
+          if (!note) {
+            note = noteTypoOf(tr.startState, this.settings.defaultLanguage);
+          }
+          if (note.forced) return note.forced;
+          const line = tr.startState.doc.lineAt(pos).text;
+          return detectLanguage(line) ?? note.fallback;
+        };
+
         tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
           const insertedText = inserted.sliceString(0, 0 + inserted.length);
           const matchedRules = this.inputRuleMap[insertedText];
@@ -366,6 +410,10 @@ export default class SmartTypography extends Plugin {
           for (let rule of matchedRules) {
             // If we're in a codeblock, etc, return early, no need to continue checking
             if (!canPerformReplacement(fromA)) return;
+
+            if (this.frenchInputRules.has(rule) && languageAt(fromA) !== "fr") {
+              continue;
+            }
 
             // Fenetre de contexte en amont du caractere insere.
             // 3 caracteres par defaut, plus si la regle le demande.
@@ -546,7 +594,8 @@ export default class SmartTypography extends Plugin {
     }
 
     const selection = editor.getSelection();
-    const corrected = applyFrenchTypography(selection, this.settings);
+    const note = noteTypo(editor.getValue(), this.settings.defaultLanguage);
+    const corrected = applyTypography(selection, this.settings, note);
     if (corrected === selection) {
       new Notice("Rien à corriger dans cette sélection.");
       return;
@@ -564,7 +613,7 @@ export default class SmartTypography extends Plugin {
   // Le repère n'a de sens que si les règles françaises sont actives.
   applyMarkers() {
     this.markerExtensions.length = 0;
-    if (this.settings.frenchSpacing && this.settings.flagWrongSpaces) {
+    if (this.settings.flagWrongSpaces) {
       this.markerExtensions.push(
         createSpacingMarkerPlugin(
           () => this.settings,
@@ -635,6 +684,37 @@ class SmartTypographySettingTab extends PluginSettingTab {
         });
     }
 
+    new Setting(containerEl).setName("Langues").setHeading();
+
+    new Setting(containerEl)
+      .setName("Langue par défaut")
+      .setDesc(
+        "Langue des lignes et des notes trop courtes pour être reconnues. La propriété smart-typo d'une note (fr, en, de, ru, tr, it, es) impose sa langue ; smart-typo: false coupe le repérage."
+      )
+      .addDropdown((dd) => {
+        for (const lang of LANGS) dd.addOption(lang, LANG_NAMES[lang]);
+        dd.setValue(this.plugin.settings.defaultLanguage).onChange(
+          async (value) => {
+            this.plugin.settings.defaultLanguage = value as Lang;
+            await this.plugin.saveSettings();
+          }
+        );
+      });
+
+    new Setting(containerEl)
+      .setName("Signaler les fautes de typographie")
+      .setDesc(
+        "Marque d'un petit repère rouge, dans les dossiers concernés, les fautes de typographie selon la langue de chaque ligne ; l'info-bulle du repère dit laquelle. La commande « Corriger la typographie de la sélection » corrige ce qui peut l'être."
+      )
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.flagWrongSpaces)
+          .onChange(async (value) => {
+            this.plugin.settings.flagWrongSpaces = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
     new Setting(containerEl)
       .setName("Typographie française")
       .setHeading();
@@ -642,7 +722,7 @@ class SmartTypographySettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Espaces avant la ponctuation double")
       .setDesc(
-        "Insère une espace fine insécable (U+202F) devant ; ! ? et »"
+        "Insère à la frappe une espace fine insécable (U+202F) devant ; ! ? et », sur les lignes reconnues comme françaises"
       )
       .addToggle((toggle) => {
         toggle
@@ -705,20 +785,6 @@ class SmartTypographySettingTab extends PluginSettingTab {
             .setValue(this.plugin.settings.frenchPercent)
             .onChange(async (value) => {
               this.plugin.settings.frenchPercent = value;
-              await this.plugin.saveSettings();
-            });
-        });
-
-      new Setting(containerEl)
-        .setName("Signaler les espacements fautifs")
-        .setDesc(
-          "Marque d'un petit repère rouge, dans les dossiers concernés, chaque signe dont l'espace est ordinaire ou absente là où le français impose une insécable. La commande « Corriger la typographie de la sélection » corrige les deux."
-        )
-        .addToggle((toggle) => {
-          toggle
-            .setValue(this.plugin.settings.flagWrongSpaces)
-            .onChange(async (value) => {
-              this.plugin.settings.flagWrongSpaces = value;
               await this.plugin.saveSettings();
             });
         });
@@ -965,4 +1031,37 @@ function shouldCheckTextAtPos(
   }
 
   return false;
+}
+
+type TypoChoice = { value: Lang | false | null; label: string };
+
+const TYPO_CHOICES: TypoChoice[] = [
+  { value: null, label: "Détection automatique" },
+  ...LANGS.map((lang) => ({ value: lang, label: LANG_NAMES[lang] })),
+  { value: false, label: "Ne pas vérifier la typographie" },
+];
+
+// Choix de la propriété smart-typo d'une note ; le choix en vigueur est coché.
+class TypoSettingModal extends SuggestModal<TypoChoice> {
+  constructor(
+    app: App,
+    private current: Lang | false | null,
+    private onChoose: (value: Lang | false | null) => void
+  ) {
+    super(app);
+    this.setPlaceholder("Langue typographique de la note");
+  }
+
+  getSuggestions(query: string): TypoChoice[] {
+    const q = query.toLowerCase();
+    return TYPO_CHOICES.filter((c) => c.label.toLowerCase().includes(q));
+  }
+
+  renderSuggestion(choice: TypoChoice, el: HTMLElement) {
+    el.textContent = (choice.value === this.current ? "✓ " : "") + choice.label;
+  }
+
+  onChooseSuggestion(choice: TypoChoice) {
+    this.onChoose(choice.value);
+  }
 }

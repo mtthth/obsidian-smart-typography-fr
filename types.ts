@@ -1,3 +1,5 @@
+import { Lang } from "languages";
+
 export interface SmartTypographySettings {
   curlyQuotes: boolean;
   emDash: boolean;
@@ -27,6 +29,8 @@ export interface SmartTypographySettings {
   frenchGuillemets: boolean;
   frenchPercent: boolean;
   flagWrongSpaces: boolean;
+  // Langue des lignes et des notes que la détection ne sait pas reconnaître.
+  defaultLanguage: Lang;
   frNarrowSpace: string;
   frNbSpace: string;
 }

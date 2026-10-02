@@ -60,9 +60,9 @@ après la balise : `*mot*?` donne `*mot* ?`, de même après `**`, `` ` ``,
 
 La commande **« Corriger la typographie de la sélection »** (palette de
 commandes, et clic droit quand du texte est sélectionné) applique d'un coup
-les règles françaises au texte sélectionné, avec les mêmes réglages que la
-saisie : caractère d'espace fine, et interrupteurs deux-points, guillemets et
-pourcentages. Elle n'a pas de raccourci par défaut ; attribuez-le dans Réglages
+au texte sélectionné les règles de la langue de chaque ligne (voir
+[Langues](#langues)), avec les mêmes réglages que la saisie : caractère
+d'espace fine, et interrupteurs deux-points, guillemets et pourcentages. Elle n'a pas de raccourci par défaut ; attribuez-le dans Réglages
 → Raccourcis clavier. Tout s'annule d'un seul `Ctrl + Z`, et la sélection
 reste active après coup.
 
@@ -93,31 +93,76 @@ pas son espace, faute de contexte. Et sélectionner l'intérieur d'un bloc de
 métadonnées *sans* son `---` ouvrant fait perdre à la commande le seul indice
 qui le lui signale : les `clé: valeur` reçoivent alors une insécable.
 
-Elle ne détecte pas la langue : elle applique les règles françaises, la portée
-par dossier étant ce qui dit où l'on écrit en français. Pas de règles
-anglaises non plus : les guillemets courbes anglais restent le travail de
-« Curly Quotes » à la saisie.
+Hors du français, les guillemets droits ne sont convertis que si « Curly
+Quotes » est actif ; les traits d'union entre espaces deviennent des tirets.
 
-## Repérer les espacements fautifs
+## Langues
 
-Réglage **« Signaler les espacements fautifs »** (activé par défaut, dans la
-section Typographie française, et seulement si « Espaces avant la ponctuation
-double » l'est aussi). Dans les dossiers concernés, un petit repère rouge en
-forme de caret, glissé sous la ligne contre le signe, marque chaque endroit où
-le français impose une insécable — devant `;` `!` `?` `%` `:` `»`, derrière
-`«` — et où l'espace est ordinaire (elle autorise un retour à la ligne devant
-la ponctuation) ou absente. Une insécable déjà présente n'est jamais signalée ;
-une espace ordinaire qui la côtoie l'est. Les interrupteurs deux-points,
-guillemets et pourcentages s'appliquent aussi au repérage.
+Chaque ligne est vérifiée selon sa langue : français, anglais, allemand,
+russe, turc, italien ou espagnol. La portée par dossier dit où le plugin agit,
+la langue dit quelles règles il applique.
 
-**Désactiver pour une note** : clic droit dans la note → « Ne pas repérer les
-espacements dans cette note » ajoute `typo-fr: false` aux propriétés (le bloc
-YAML est créé au besoin) ; la même entrée, devenue « Réactiver le repérage… »,
-retire la propriété. On peut aussi l'écrire à la main. Seuls les repères
-rouges sont coupés : la saisie et la commande de correction restent actives.
+**Détection** — la langue d'une ligne est reconnue à ses mots-outils (le, the,
+der, ve, che, el…), à ses lettres propres (ß, ñ, ğ, ê…) et, pour le russe, à son
+alphabet. Une ligne trop courte ou trop mêlée prend la langue dominante de la
+note ; une note trop courte, la **langue par défaut** des réglages.
+
+**Propriété `smart-typo`** — clic droit dans la note → « Langue typographique
+de la note… » (ou la commande du même nom) pose ou retire la propriété ; on
+peut aussi l'écrire à la main :
+
+| Valeur | Effet |
+|--------|-------|
+| absente | détection automatique |
+| `fr` `en` `de` `ru` `tr` `it` `es` | langue imposée à toute la note |
+| `false` | aucun repère rouge ; saisie et correction restent actives |
+
+**Saisie** — les règles de saisie françaises (insécables devant `;` `!` `?`
+`:` `%` `»`) ne jouent que sur une ligne reconnue comme française.
+
+## Repérer les fautes de typographie
+
+Réglage **« Signaler les fautes de typographie »** (activé par défaut). Dans les
+dossiers concernés, un petit repère rouge en forme de caret, glissé sous la
+ligne contre le signe fautif, marque les fautes ci-dessous. Son info-bulle dit
+laquelle, et la langue retenue pour la ligne.
+
+**Toutes langues**
+
+| Faute | Exemple | Correction |
+|-------|---------|------------|
+| espace après `(`, avant `)` | `( attire )` | `(attire)` |
+| espace avant `.` ou `,` | `attire .` | `attire.` |
+| virgule collée au mot suivant | `mot,suite` | `mot, suite` |
+| guillemet ou apostrophe droit | `"non"`, `l'été` | selon la langue |
+| trait d'union entre espaces | `mot - mot` | `mot – mot` (`—` en russe et espagnol) |
+| espace doublée | `deux  espaces` | `deux espaces` |
+
+**Par langue**
+
+| Langue | Règles |
+|--------|--------|
+| français | insécable devant `;` `!` `?` `:` `%` `»` et derrière `«` (fine, ou pleine devant `:` et `%`) ; `"…"` → `« … »` |
+| anglais | aucune espace devant `;` `:` `!` `?` ; `50%` collé ; `"…"` → `“…”` |
+| allemand | aucune espace devant `;` `:` `!` `?` ; `50 %` (insécable) ; `„…“`, jamais `”` ; `z. B.`, `d. h.` espacés |
+| russe | aucune espace devant `;` `:` `!` `?` ni dans `«…»` ; tiret `—` |
+| turc | aucune espace devant `;` `:` `!` `?` ni dans `«…»` ; `%50`, le signe avant le nombre ; `"…"` → `“…”` |
+| italien | aucune espace devant `;` `:` `!` `?` ni dans `«…»` ; `50%` collé ; `È`, jamais `E'` |
+| espagnol | aucune espace devant `;` `:` `!` `?` ni dans `«…»` ; `¿…?` et `¡…!` appariés, sans espace après `¿` `¡` ; `50 %` (insécable) ; tiret `—` |
+
+Les décimales (`3,5`), extensions (`a.md`), points de suspension, émoticônes
+(`:)`), alignements de tableau (`:---`), puces, URL, code et autres zones
+protégées ne sont pas signalés. Les espaces doublées sont permises dans les
+tableaux (lignes qui commencent par `|`, ou bloc sans bordure qui contient une
+ligne `---|---`), dans l'indentation, après une puce, un numéro ou un `>`, et
+en fin de ligne, où deux espaces forcent un retour à la ligne. En français, une insécable déjà présente n'est
+jamais signalée ; une espace ordinaire qui la côtoie l'est. Les interrupteurs
+deux-points, guillemets et pourcentages s'appliquent au français, à la saisie
+comme au repérage.
 
 C'est purement visuel, le texte n'est jamais modifié, et la commande de
-correction règle les deux cas. Les zones protégées de la commande le sont aussi
+correction règle ce qui peut l'être — pas le `¿` manquant, dont elle ne sait
+où placer l'ouverture. Les zones protégées de la commande le sont aussi
 ici ; le bloc de métadonnées est reconnu sur la note entière. Limite connue :
 dans un bloc de code dont l'ouverture ``` est au-dessus de la partie visible,
 des espaces peuvent être signalées à tort. Ce repère est fourni par
@@ -147,10 +192,13 @@ des espaces peuvent être signalées à tort. Ce repère est fourni par
   via le fichier actif — un éditeur en survol non focalisé peut alors être
   jugé sur le chemin de la note de dessous.
 - Une recherche sur `mot ;` avec une espace ordinaire ne trouvera plus rien.
+- La détection peut se tromper sur une ligne courte qui mêle deux langues ;
+  la propriété `smart-typo` tranche alors pour toute la note.
 
 ## Tests
 
-`npm test` vérifie la correction et le repérage (`fixTypography.ts`), sans
+`npm test` vérifie la correction, le repérage et la détection de langue
+(`fixTypography.ts`, `languages.ts`), sans
 Obsidian ni dépendance de plus.
 
 ## Compiler

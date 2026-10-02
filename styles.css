@@ -1,4 +1,5 @@
-/* Espacement fautif devant ; ! ? % : ou à l'intérieur des guillemets français
+/* Faute de typographie : espaces universelles (autour de « ( », « ) », « . »,
+   « , »), guillemets droits, et, en français, espacement fautif devant ; ! ? % : ou à l'intérieur des guillemets français
    — espace ordinaire au lieu d'une insécable, ou absente : un petit repère
    rouge en forme de caret, posé contre le signe, du côté où l'insécable est
    attendue (devant ; ! ? : % », derrière «). Il n'occupe aucune largeur dans
@@ -6,12 +7,14 @@
    même où il en signale l'absence. Le triangle est tracé hors du flux, glissé
    sous la ligne de base, pointe en haut, pour ne pas masquer le signe. */
 .smart-typography-fr-marker-before,
-.smart-typography-fr-marker-after {
+.smart-typography-fr-marker-after,
+.smart-typography-fr-marker-on {
   position: relative;
 }
 
 .smart-typography-fr-marker-before::before,
-.smart-typography-fr-marker-after::after {
+.smart-typography-fr-marker-after::after,
+.smart-typography-fr-marker-on::after {
   content: "";
   position: absolute;
   bottom: calc(0.25em - 7px);
@@ -26,4 +29,11 @@
 
 .smart-typography-fr-marker-after::after {
   right: -5px;
+}
+
+/* Guillemet ou apostrophe droit, ou espace universelle fautive sur le signe
+   lui-même : le caret est centré sous lui. */
+.smart-typography-fr-marker-on::after {
+  left: 50%;
+  margin-left: -5px;
 }
