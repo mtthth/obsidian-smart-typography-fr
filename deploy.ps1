@@ -42,7 +42,7 @@ try {
 	}
 
 	# Jamais data.json : ce sont les réglages du vault.
-	Copy-Item main.js, manifest.json -Destination $VaultPluginPath -Force
+	Copy-Item main.js, manifest.json, styles.css -Destination $VaultPluginPath -Force
 }
 finally {
 	Pop-Location

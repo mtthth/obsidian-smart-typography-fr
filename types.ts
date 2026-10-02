@@ -26,6 +26,7 @@ export interface SmartTypographySettings {
   frenchColon: boolean;
   frenchGuillemets: boolean;
   frenchPercent: boolean;
+  flagWrongSpaces: boolean;
   frNarrowSpace: string;
   frNbSpace: string;
 }

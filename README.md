@@ -13,7 +13,7 @@ npm install
 .\deploy.ps1
 ```
 
-`deploy.ps1` compile puis copie `main.js` et `manifest.json` dans
+`deploy.ps1` compile puis copie `main.js`, `manifest.json` et `styles.css` dans
 `G:\Mon Drive\txt\journal\.obsidian\plugins\obsidian-smart-typography\`
 (autre destination : `.\deploy.ps1 -VaultPluginPath <dossier>`). Il ne
 touche jamais à `data.json`, qui contient les réglages. Rechargez ensuite
@@ -56,6 +56,67 @@ La ponctuation qui suit une balise fermante reçoit aussi son espace, placée
 après la balise : `*mot*?` donne `*mot* ?`, de même après `**`, `` ` ``,
 `~~`, `==` ou `</u>`. `”` et `›` comptent comme fin de mot.
 
+## Corriger un texte déjà écrit
+
+La commande **« Corriger la typographie de la sélection »** (palette de
+commandes, et clic droit quand du texte est sélectionné) applique d'un coup
+les règles françaises au texte sélectionné, avec les mêmes réglages que la
+saisie : caractère d'espace fine, et interrupteurs deux-points, guillemets et
+pourcentages. Elle n'a pas de raccourci par défaut ; attribuez-le dans Réglages
+→ Raccourcis clavier. Tout s'annule d'un seul `Ctrl + Z`, et la sélection
+reste active après coup.
+
+C'est une commande explicite : elle ne dépend pas de la portée par dossier, ni
+de l'interrupteur « Espaces avant la ponctuation double ».
+
+| Exemple | Correction appliquée |
+|---------|----------------------|
+| `Bonjour ; ça va ?` | espace fine insécable avant `;` `!` `?` |
+| `Attention : ici` | espace insécable avant `:` |
+| `50 %` | espace insécable avant `%` (jamais avant `%%`, qui délimite un commentaire) |
+| `« citation »` | espaces fines à l'intérieur des guillemets |
+| `Il a dit "bonjour"` | guillemets droits appariés → `« bonjour »` |
+| `l'été` | apostrophe typographique (si « Curly Quotes » est actif) |
+| `Ah...` | points de suspension `Ah…` (si « Ellipsis » est actif) |
+| `mot , suite` | espace parasite avant la virgule supprimée |
+
+La commande est idempotente : la relancer sur un texte déjà corrigé ne change
+rien. Elle ne touche jamais aux blocs et portions de code, aux formules, aux
+liens et images intégrées, aux URL, aux balises HTML, aux définitions de
+référence et de note (`[ref]: url`, `[^1]: texte`), aux commentaires
+(`%% ... %%`), ni au bloc de métadonnées quand la sélection commence par lui.
+Les cas ambigus sont laissés tels quels : `12:30`, `clé:: valeur` (Dataview),
+`C:\dossier`, `:)` et les guillemets droits non appariés (`5"`).
+
+Un `!` ou `?` placé juste après une portion protégée (`` `code` ! ``) ne reçoit
+pas son espace, faute de contexte. Et sélectionner l'intérieur d'un bloc de
+métadonnées *sans* son `---` ouvrant fait perdre à la commande le seul indice
+qui le lui signale : les `clé: valeur` reçoivent alors une insécable.
+
+Elle ne détecte pas la langue : elle applique les règles françaises, la portée
+par dossier étant ce qui dit où l'on écrit en français. Pas de règles
+anglaises non plus : les guillemets courbes anglais restent le travail de
+« Curly Quotes » à la saisie.
+
+## Repérer les espacements fautifs
+
+Réglage **« Signaler les espacements fautifs »** (activé par défaut, dans la
+section Typographie française, et seulement si « Espaces avant la ponctuation
+double » l'est aussi). Dans les dossiers concernés, un petit repère rouge en
+forme de caret, glissé sous la ligne contre le signe, marque chaque endroit où
+le français impose une insécable — devant `;` `!` `?` `%` `:` `»`, derrière
+`«` — et où l'espace est ordinaire (elle autorise un retour à la ligne devant
+la ponctuation) ou absente. Une insécable déjà présente n'est jamais signalée ;
+une espace ordinaire qui la côtoie l'est. Les interrupteurs deux-points,
+guillemets et pourcentages s'appliquent aussi au repérage.
+
+C'est purement visuel, le texte n'est jamais modifié, et la commande de
+correction règle les deux cas. Les zones protégées de la commande le sont aussi
+ici ; le bloc de métadonnées est reconnu sur la note entière. Limite connue :
+dans un bloc de code dont l'ouverture ``` est au-dessus de la partie visible,
+des espaces peuvent être signalées à tort. Ce repère est fourni par
+`styles.css`, que `deploy.ps1` copie avec `main.js`.
+
 ## Garde-fous intégrés
 
 - Aucune fine à l'intérieur d'une URL (`http://a.fr/b?c=1` reste intact),
@@ -72,7 +133,7 @@ après la balise : `*mot*?` donne `*mot* ?`, de même après `**`, `` ` ``,
 
 ## Limites
 
-- **Rien n'est appliqué au texte déjà écrit.** Ce sont des règles de saisie.
+- **Les règles de saisie ne s'appliquent pas au texte déjà écrit** : pour cela, la commande de correction de la sélection.
 - Dataview : `champ:: valeur` reçoit une insécable sur le premier `:` et
   casse le champ. Désactivez l'option deux-points si vous en posez.
 - URL sans schéma (`www.exemple.fr/x?y=1`) : le `?` reçoit une fine.
@@ -80,6 +141,11 @@ après la balise : `*mot*?` donne `*mot* ?`, de même après `**`, `` ` ``,
   via le fichier actif — un éditeur en survol non focalisé peut alors être
   jugé sur le chemin de la note de dessous.
 - Une recherche sur `mot ;` avec une espace ordinaire ne trouvera plus rien.
+
+## Tests
+
+`npm test` vérifie la correction et le repérage (`fixTypography.ts`), sans
+Obsidian ni dépendance de plus.
 
 ## Compiler
 
@@ -94,30 +160,15 @@ c'est Obsidian qui le fournit. Deux avertissements de types subsistent
 (`tokenClassNodeProp` n'existe que dans le CodeMirror d'Obsidian), sans
 effet sur `main.js`.
 
-## Le patch
-
-`smart-typography-fr.patch` rassemble tout ce que le fork change dans le
-code amont : les quatre fichiers touchés (`main.ts`, `types.ts`,
-`inputRules.ts`, `manifest.json`) plus le nouveau `frenchRules.ts`. Il
-s'applique sur un clone du tag `1.0.18` avec `git apply`, mais ne suffit
-pas à compiler : il laisse de côté `package.json`, et un clone amont bute
-sur npm 12 et TS 4.2. Pour compiler, partez de ce dépôt. Pour régénérer
-le patch une fois les modifications commitées :
-
-```bash
-git diff 1.0.18 HEAD --output=smart-typography-fr.patch -- main.ts types.ts inputRules.ts manifest.json frenchRules.ts
-```
-
-Passez par `--output` plutôt que par une redirection `>` : PowerShell
-réécrirait les fins de ligne, et les morceaux de `main.ts` et `manifest.json`
-(en CRLF dans le dépôt amont) ne s'appliqueraient plus.
+## Comparer à l'amont
 
 Le tag `1.0.18` vient du dépôt amont. Sur un nouveau clone, récupérez-le
-d'abord :
+d'abord, puis comparez :
 
 ```bash
 git remote add upstream https://github.com/mgmeyers/obsidian-smart-typography
 git fetch upstream --tags
+git diff 1.0.18 HEAD
 ```
 
 ## Licence

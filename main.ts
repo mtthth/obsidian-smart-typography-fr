@@ -1,4 +1,11 @@
-import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
+import {
+  App,
+  Editor,
+  Notice,
+  Plugin,
+  PluginSettingTab,
+  Setting,
+} from "obsidian";
 import * as obsidianApi from "obsidian";
 import {
   ChangeSpec,
@@ -39,6 +46,9 @@ import {
   legacyGuillemetRules,
   legacySmartQuoteRules,
 } from "legacyInputRules";
+import { Extension } from "@codemirror/state";
+import { applyFrenchTypography } from "fixTypography";
+import { createSpacingMarkerPlugin } from "spacingMarkers";
 import { syntaxTree, tokenClassNodeProp } from "@codemirror/language";
 
 import { SmartTypographySettings } from "types";
@@ -73,6 +83,7 @@ const DEFAULT_SETTINGS: SmartTypographySettings = {
   frenchColon: true,
   frenchGuillemets: true,
   frenchPercent: true,
+  flagWrongSpaces: true,
   frNarrowSpace: FINE,
   frNbSpace: NBSP,
 };
@@ -85,6 +96,9 @@ export default class SmartTypography extends Plugin {
   legacyInputRules: LegacyInputRule[];
   legacyLastUpdate: WeakMap<CodeMirror.Editor, LegacyInputRule>;
   scopeFolders: string[] = [];
+  // Tableau relu par Obsidian pour chaque éditeur : le modifier puis appeler
+  // updateOptions() reconfigure les éditeurs ouverts sans recharger le plugin.
+  private markerExtensions: Extension[] = [];
 
   buildInputRules() {
     this.legacyInputRules = [];
@@ -189,6 +203,28 @@ export default class SmartTypography extends Plugin {
     await this.loadSettings();
 
     this.addSettingTab(new SmartTypographySettingTab(this.app, this));
+
+    this.registerEditorExtension(this.markerExtensions);
+    this.applyMarkers();
+
+    this.addCommand({
+      id: "fix-typography-in-selection",
+      name: "Corriger la typographie de la sélection",
+      editorCallback: (editor: Editor) => this.fixTypography(editor),
+    });
+
+    // Clic droit : l'entrée n'apparaît que s'il y a une sélection à corriger.
+    this.registerEvent(
+      this.app.workspace.on("editor-menu", (menu, editor) => {
+        if (!editor.somethingSelected()) return;
+        menu.addItem((item) =>
+          item
+            .setTitle("Corriger la typographie de la sélection")
+            .setIcon("text-cursor-input")
+            .onClick(() => this.fixTypography(editor))
+        );
+      })
+    );
 
     // Codemirror 6
     //
@@ -463,9 +499,50 @@ export default class SmartTypography extends Plugin {
     this.buildInputRules();
   }
 
+  // Correction d'un texte déjà écrit, selon les réglages du plugin. Commande
+  // explicite : elle ne dépend pas de la portée par dossier.
+  fixTypography(editor: Editor) {
+    if (!editor.somethingSelected()) {
+      new Notice("Sélectionnez d'abord le texte à corriger.");
+      return;
+    }
+
+    const selection = editor.getSelection();
+    const corrected = applyFrenchTypography(selection, this.settings);
+    if (corrected === selection) {
+      new Notice("Rien à corriger dans cette sélection.");
+      return;
+    }
+
+    // Un seul replaceSelection : la correction s'annule d'un seul Ctrl+Z. La
+    // sélection est rétablie ensuite, la plupart des corrections étant des
+    // espaces invisibles.
+    const from = editor.getCursor("from");
+    editor.replaceSelection(corrected);
+    editor.setSelection(from, editor.getCursor());
+    new Notice("Typographie corrigée.");
+  }
+
+  // Le repère n'a de sens que si les règles françaises sont actives.
+  applyMarkers() {
+    this.markerExtensions.length = 0;
+    if (this.settings.frenchSpacing && this.settings.flagWrongSpaces) {
+      this.markerExtensions.push(
+        createSpacingMarkerPlugin(
+          () => this.settings,
+          (state) => this.isPathInScope(this.currentFilePath(state))
+        )
+      );
+    }
+    this.app.workspace.updateOptions();
+  }
+
   async saveSettings() {
     this.buildInputRules();
     await this.saveData(this.settings);
+    // Un plugin neuf à chaque changement de réglage : c'est ce qui force
+    // CodeMirror à reconstruire les décorations des éditeurs ouverts.
+    this.applyMarkers();
   }
 }
 
@@ -590,6 +667,20 @@ class SmartTypographySettingTab extends PluginSettingTab {
             .setValue(this.plugin.settings.frenchPercent)
             .onChange(async (value) => {
               this.plugin.settings.frenchPercent = value;
+              await this.plugin.saveSettings();
+            });
+        });
+
+      new Setting(containerEl)
+        .setName("Signaler les espacements fautifs")
+        .setDesc(
+          "Marque d'un petit repère rouge, dans les dossiers concernés, chaque signe dont l'espace est ordinaire ou absente là où le français impose une insécable. La commande « Corriger la typographie de la sélection » corrige les deux."
+        )
+        .addToggle((toggle) => {
+          toggle
+            .setValue(this.plugin.settings.flagWrongSpaces)
+            .onChange(async (value) => {
+              this.plugin.settings.flagWrongSpaces = value;
               await this.plugin.saveSettings();
             });
         });

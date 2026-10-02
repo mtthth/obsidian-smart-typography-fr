@@ -1,0 +1,29 @@
+/* Espacement fautif devant ; ! ? % : ou à l'intérieur des guillemets français
+   — espace ordinaire au lieu d'une insécable, ou absente : un petit repère
+   rouge en forme de caret, posé contre le signe, du côté où l'insécable est
+   attendue (devant ; ! ? : % », derrière «). Il n'occupe aucune largeur dans
+   la ligne : en écartant les caractères, il ferait apparaître une espace là
+   même où il en signale l'absence. Le triangle est tracé hors du flux, glissé
+   sous la ligne de base, pointe en haut, pour ne pas masquer le signe. */
+.smart-typography-fr-marker-before,
+.smart-typography-fr-marker-after {
+  position: relative;
+}
+
+.smart-typography-fr-marker-before::before,
+.smart-typography-fr-marker-after::after {
+  content: "";
+  position: absolute;
+  bottom: calc(0.25em - 7px);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 7px solid var(--text-error, #e93147);
+}
+
+.smart-typography-fr-marker-before::before {
+  left: -5px;
+}
+
+.smart-typography-fr-marker-after::after {
+  right: -5px;
+}

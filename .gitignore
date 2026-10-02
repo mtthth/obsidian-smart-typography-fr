@@ -16,3 +16,6 @@ main.js
 
 # history
 .history
+
+# tests
+tests/.tmp
