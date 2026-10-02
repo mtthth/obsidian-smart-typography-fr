@@ -53,7 +53,8 @@ import {
   applyFrenchTypography,
 } from "fixTypography";
 import { createSpacingMarkerPlugin } from "spacingMarkers";
-import { syntaxTree, tokenClassNodeProp } from "@codemirror/language";
+import { syntaxTree } from "@codemirror/language";
+import * as cmLanguage from "@codemirror/language";
 
 import { SmartTypographySettings } from "types";
 import { Tree } from "@lezer/common";
@@ -331,9 +332,9 @@ export default class SmartTypography extends Plugin {
 
           const nodeProps = tree
             .resolveInner(pos, 1)
-            .type.prop(tokenClassNodeProp);
+            .type.prop((cmLanguage as any).tokenClassNodeProp);
 
-          if (nodeProps && ignoreListRegEx.test(nodeProps)) {
+          if (nodeProps && ignoreListRegEx.test(nodeProps as string)) {
             seenPositions[pos] = false;
           } else {
             seenPositions[pos] = true;

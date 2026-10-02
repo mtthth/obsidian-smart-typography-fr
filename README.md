@@ -162,9 +162,9 @@ compilait quand même, mais sans vérifier grand-chose.
 
 `@codemirror/language` vient du registre npm et non plus du fork git de
 l'amont, que npm 12 refuse d'installer. Le module reste externe au bundle :
-c'est Obsidian qui le fournit. Deux avertissements de types subsistent
-(`tokenClassNodeProp` n'existe que dans le CodeMirror d'Obsidian), sans
-effet sur `main.js`.
+c'est Obsidian qui le fournit. `tokenClassNodeProp` n'existe que dans le
+CodeMirror d'Obsidian : il est lu par un `as any`, d'où un build sans
+avertissement.
 
 ## Comparer à l'amont
 

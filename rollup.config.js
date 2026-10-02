@@ -26,5 +26,9 @@ export default {
     "@codemirror/language",
     "@codemirror/stream-parser",
   ],
-  plugins: [typescript(), nodeResolve({ browser: true }), commonjs()],
+  plugins: [typescript(
+      isProd
+        ? { inlineSourceMap: false, inlineSources: false, sourceMap: false }
+        : {}
+    ), nodeResolve({ browser: true }), commonjs()],
 };
