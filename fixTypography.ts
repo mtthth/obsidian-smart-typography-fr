@@ -198,3 +198,14 @@ export function findFaultySigns(
 
   return [...signs].sort((a, b) => a[0] - b[0]);
 }
+
+// Propriété de métadonnées qui coupe le repérage des espacements fautifs pour
+// la note : `typo-fr: false`.
+export const NO_CHECK_KEY = "typo-fr";
+
+// Vrai si le bloc de métadonnées (`---` compris) contient `typo-fr: false`.
+export function frontmatterDisablesCheck(frontmatter: string): boolean {
+  return /^typo-fr[ 	]*:[ 	]*["']?(false|no)["']?[ 	]*(#.*)?$/im.test(
+    frontmatter
+  );
+}

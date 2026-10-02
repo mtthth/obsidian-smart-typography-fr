@@ -110,6 +110,12 @@ la ponctuation) ou absente. Une insécable déjà présente n'est jamais signal�
 une espace ordinaire qui la côtoie l'est. Les interrupteurs deux-points,
 guillemets et pourcentages s'appliquent aussi au repérage.
 
+**Désactiver pour une note** : clic droit dans la note → « Ne pas repérer les
+espacements dans cette note » ajoute `typo-fr: false` aux propriétés (le bloc
+YAML est créé au besoin) ; la même entrée, devenue « Réactiver le repérage… »,
+retire la propriété. On peut aussi l'écrire à la main. Seuls les repères
+rouges sont coupés : la saisie et la commande de correction restent actives.
+
 C'est purement visuel, le texte n'est jamais modifié, et la commande de
 correction règle les deux cas. Les zones protégées de la commande le sont aussi
 ici ; le bloc de métadonnées est reconnu sur la note entière. Limite connue :

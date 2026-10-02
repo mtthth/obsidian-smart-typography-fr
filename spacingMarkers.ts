@@ -13,7 +13,11 @@ import {
   ViewPlugin,
   ViewUpdate,
 } from "@codemirror/view";
-import { SignSide, findFaultySigns } from "fixTypography";
+import {
+  SignSide,
+  findFaultySigns,
+  frontmatterDisablesCheck,
+} from "fixTypography";
 import { SmartTypographySettings } from "types";
 
 const MARKER_CLASSES: Record<SignSide, string> = {
@@ -81,6 +85,12 @@ export function createSpacingMarkerPlugin(
 
     const settings = getSettings();
     const fmEnd = frontmatterEnd(view.state);
+    if (
+      fmEnd > 0 &&
+      frontmatterDisablesCheck(view.state.doc.sliceString(0, fmEnd))
+    ) {
+      return builder.finish();
+    }
 
     for (const { from, to } of visibleLineRanges(view)) {
       if (to <= fmEnd) continue;

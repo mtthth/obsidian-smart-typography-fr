@@ -5,6 +5,7 @@ import {
   Plugin,
   PluginSettingTab,
   Setting,
+  TFile,
 } from "obsidian";
 import * as obsidianApi from "obsidian";
 import {
@@ -47,7 +48,10 @@ import {
   legacySmartQuoteRules,
 } from "legacyInputRules";
 import { Extension } from "@codemirror/state";
-import { applyFrenchTypography } from "fixTypography";
+import {
+  NO_CHECK_KEY,
+  applyFrenchTypography,
+} from "fixTypography";
 import { createSpacingMarkerPlugin } from "spacingMarkers";
 import { syntaxTree, tokenClassNodeProp } from "@codemirror/language";
 
@@ -199,6 +203,21 @@ export default class SmartTypography extends Plugin {
     return active ? active.path : null;
   }
 
+  isCheckDisabled(file: TFile): boolean {
+    const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+    return fm?.[NO_CHECK_KEY] === false;
+  }
+
+  // Pose `typo-fr: false` dans le YAML (le bloc est créé au besoin) ou retire
+  // la propriété ; la note modifiée recalcule d'elle-même ses repères.
+  async toggleCheck(file: TFile) {
+    const off = this.isCheckDisabled(file);
+    await (this.app.fileManager as any).processFrontMatter(file, (fm: any) => {
+      if (off) delete fm[NO_CHECK_KEY];
+      else fm[NO_CHECK_KEY] = false;
+    });
+  }
+
   async onload() {
     await this.loadSettings();
 
@@ -213,15 +232,33 @@ export default class SmartTypography extends Plugin {
       editorCallback: (editor: Editor) => this.fixTypography(editor),
     });
 
-    // Clic droit : l'entrée n'apparaît que s'il y a une sélection à corriger.
+    // Clic droit : l'entrée de correction n'apparaît que s'il y a une sélection.
     this.registerEvent(
-      this.app.workspace.on("editor-menu", (menu, editor) => {
-        if (!editor.somethingSelected()) return;
+      this.app.workspace.on("editor-menu", (menu, editor, info) => {
+        if (editor.somethingSelected()) {
+          menu.addItem((item) =>
+            item
+              .setTitle("Corriger la typographie de la sélection")
+              .setIcon("text-cursor-input")
+              .onClick(() => this.fixTypography(editor))
+          );
+        }
+
+        const file = (info as any)?.file;
+        if (!file || file.extension !== "md") return;
+        if (!this.settings.frenchSpacing || !this.settings.flagWrongSpaces) {
+          return;
+        }
+        const off = this.isCheckDisabled(file);
         menu.addItem((item) =>
           item
-            .setTitle("Corriger la typographie de la sélection")
-            .setIcon("text-cursor-input")
-            .onClick(() => this.fixTypography(editor))
+            .setTitle(
+              off
+                ? "Réactiver le repérage des espacements"
+                : "Ne pas repérer les espacements dans cette note"
+            )
+            .setIcon(off ? "eye" : "eye-off")
+            .onClick(() => this.toggleCheck(file))
         );
       })
     );

@@ -18,7 +18,7 @@ for (const name of ["fixTypography", "frenchRules"]) {
 	writeFileSync(path.join(out, `${name}.mjs`), js);
 }
 
-const { applyFrenchTypography, findFaultySigns } = await import(pathToFileURL(path.join(out, "fixTypography.mjs")).href);
+const { applyFrenchTypography, findFaultySigns, frontmatterDisablesCheck } = await import(pathToFileURL(path.join(out, "fixTypography.mjs")).href);
 const { FINE, NBSP, THIN } = await import(pathToFileURL(path.join(out, "frenchRules.mjs")).href);
 
 const settings = (over = {}) => ({
@@ -121,6 +121,14 @@ signs("Du `code;ici` et voilà", [], "code protégé");
 signs("voir ![[a.png]]", [], "intégration épargnée");
 signs("Attention : 50 %", [], "deux-points et pourcentage coupés : plus rien à signaler", settings({ frenchColon: false, frenchPercent: false, frenchGuillemets: false }));
 signs("Attention : « x »", [[10, "before"]], "seul le deux-points reste signalé quand les guillemets sont coupés", settings({ frenchGuillemets: false, frenchPercent: false }));
+
+section("Propriété typo-fr");
+const off = (fm, expected, name) => check(name, frontmatterDisablesCheck(fm), expected);
+off("---\ntypo-fr: false\n---", true, "typo-fr: false");
+off("---\ntitre: x\ntypo-fr: False # non\n---", true, "casse et commentaire");
+off("---\ntypo-fr: true\n---", false, "typo-fr: true");
+off("---\ntitre: x\n---", false, "propriété absente");
+off("---\nautre-typo-fr: false\n---", false, "clé voisine ignorée");
 
 if (failures.length === 0) {
 	console.log("\nTous les tests passent.");
