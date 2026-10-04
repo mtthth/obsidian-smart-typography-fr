@@ -1,4 +1,4 @@
-import { Lang } from "languages";
+import { Lang, LangOptionsMap } from "languages";
 
 export interface SmartTypographySettings {
   curlyQuotes: boolean;
@@ -25,9 +25,8 @@ export interface SmartTypographySettings {
 
   // --- Typographie francaise ---
   frenchSpacing: boolean;
-  frenchColon: boolean;
-  frenchGuillemets: boolean;
-  frenchPercent: boolean;
+  // Familles de règles activées, langue par langue.
+  langOptions: LangOptionsMap;
   flagWrongSpaces: boolean;
   // Langue des lignes et des notes que la détection ne sait pas reconnaître.
   defaultLanguage: Lang;

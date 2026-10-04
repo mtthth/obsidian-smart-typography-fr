@@ -1,5 +1,7 @@
 # Ce que signale le triangle rouge
 
+[English version](MARKERS.md)
+
 Le plugin pose un petit triangle rouge sous un signe de l'éditeur quand il y repère une faute de typographie. Au survol, l'info-bulle donne la nature de la faute et la langue reconnue pour la ligne.
 
 Le triangle se place contre le signe en cause :
@@ -18,6 +20,21 @@ Chaque ligne est reconnue séparément, ce qui tolère une citation dans une aut
 |---|---|
 | `smart-typo: en` (ou `fr`, `de`, `ru`, `tr`, `it`, `es`) | impose la langue à toute la note |
 | `smart-typo: false` | la note n'est pas vérifiée |
+
+## Couper des repères, langue par langue
+
+Dans les réglages du plugin, « Réglages par langue » permet de choisir une langue puis d'y couper des familles de règles. Une famille coupée n'est plus ni repérée, ni corrigée par la commande de correction ; décocher « Vérifier le … » coupe tout pour cette langue (le français coupe aussi la saisie).
+
+| Famille | Cas concernés | Langues |
+|---|---|---|
+| Espaces courantes | parenthèses, virgule, point, élision, `;` `!` `?` collés, espaces doublées, fin de phrase, lignes d'espaces | toutes |
+| Avant `; ! ?` | espace avant (insécable en français, aucune ailleurs) | toutes |
+| Deux-points | espace avant `:` | toutes |
+| Guillemets « » | espaces dans les guillemets | fr, ru, tr, it, es |
+| Pourcentages | espace ou place du `%` | fr, en, de, tr, it, es |
+| Guillemets droits | `"` `'` droits, `”` allemand | toutes |
+| Trait d'union entre espaces | `mot - mot` | toutes |
+| Règles propres | `z. B.` (de), `È` (it), `¿` `¡` (es) | de, it, es |
 
 ## Ce qui n'est jamais signalé
 
@@ -50,15 +67,15 @@ Précisions :
 
 ## Français
 
-L'espace attendue est une **insécable** (fine insécable avant `; ! ?` et dans les guillemets, insécable ordinaire avant `:` et `%`, selon les réglages). Deux fautes sont signalées : l'espace ordinaire, qui autorise un retour à la ligne, et l'espace absente. Une insécable déjà présente n'est jamais signalée, mais elle ne rachète pas une espace ordinaire qui la côtoie.
+L'espace attendue est une **insécable** (fine insécable avant `; ! ?` et dans les guillemets, insécable ordinaire avant `:` et `%`, selon les familles de règles cochées). Deux fautes sont signalées : l'espace ordinaire, qui autorise un retour à la ligne, et l'espace absente. Une insécable déjà présente n'est jamais signalée, mais elle ne rachète pas une espace ordinaire qui la côtoie.
 
 | Cas | Exemple fautif | Repère | Réglage |
 |---|---|---|---|
-| Avant `;` `?` `!` | `Quoi ?` `Quoi?` | à gauche du signe | toujours |
+| Avant `;` `?` `!` | `Quoi ?` `Quoi?` | à gauche du signe | « Avant ; ! ? » |
 | Avant `%` | `50 %` `50%` | à gauche du `%` | « Pourcentages » |
 | Avant `:` | `Note :` `Note:` | à gauche du `:` | « Deux-points » |
-| Après `«` | `« mot` `«mot` | à droite du `«` | « Guillemets » |
-| Avant `»` | `mot »` `mot»` | à gauche du `»` | « Guillemets » |
+| Après `«` | `« mot` `«mot` | à droite du `«` | « Guillemets « » » |
+| Avant `»` | `mot »` `mot»` | à gauche du `»` | « Guillemets « » » |
 
 Précisions :
 

@@ -1,5 +1,7 @@
 # Smart Typography FR
 
+[English version](README.en.md) · [Cas signalés par le triangle rouge](REPERES.md)
+
 Par Matthieu Thomas (cidrolin), sur une idée de mgmeyers : ce plugin est un
 fork de son [Smart Typography](https://github.com/mgmeyers/obsidian-smart-typography)
 **1.0.18**, dont il reprend le code. L'historique amont est conservé : le
@@ -33,7 +35,19 @@ marchent dessus.
 un chemin par ligne, relatif à la racine du coffre, sous-dossiers compris,
 casse respectée. Liste vide = plugin inactif partout.
 
-**Typographie française** — désactivée par défaut. Une fois activée :
+**Réglages par langue** — un menu choisit la langue (français, anglais,
+allemand, russe, turc, italien, espagnol), puis chaque famille de règles s'y
+coupe ou s'y active : espaces courantes, avant `; ! ?`, deux-points,
+guillemets « », pourcentages, guillemets droits, trait d'union entre espaces,
+règles propres à la langue. « Vérifier le … » coupe toute la langue. Ces
+réglages commandent la correction de la sélection et le repérage rouge ; en
+français, ils règlent aussi la saisie. Voir [REPERES.md](REPERES.md) pour le
+détail de chaque famille. Les anciens interrupteurs français (deux-points,
+guillemets, pourcentages) sont repris tels quels dans la langue française.
+
+**Typographie française à la saisie** — désactivée par défaut
+(« Espaces avant la ponctuation double », dans les réglages du français). Une
+fois activée :
 
 | Saisie              | Résultat      | Espace |
 |---------------------|---------------|--------|
@@ -48,7 +62,8 @@ casse respectée. Liste vide = plugin inactif partout.
 Le deux-points prend une insécable pleine, pas une fine : règle de
 l'Imprimerie nationale, une fine y serait trop serrée. Un menu permet de
 rabattre la fine sur U+00A0 ou U+2009 si votre police ne rend pas U+202F.
-Deux-points, guillemets et pourcentages ont chacun leur interrupteur.
+Deux-points, guillemets et pourcentages ont chacun leur interrupteur, dans
+les réglages du français.
 
 Une seule espace devant un groupe : `Oh !!` donne `Oh !!`, pas `Oh ! !`.
 
@@ -62,7 +77,7 @@ La commande **« Corriger la typographie de la sélection »** (palette de
 commandes, et clic droit quand du texte est sélectionné) applique d'un coup
 au texte sélectionné les règles de la langue de chaque ligne (voir
 [Langues](#langues)), avec les mêmes réglages que la saisie : caractère
-d'espace fine, et interrupteurs deux-points, guillemets et pourcentages. Elle n'a pas de raccourci par défaut ; attribuez-le dans Réglages
+d'espace fine, et familles de règles cochées pour chaque langue. Elle n'a pas de raccourci par défaut ; attribuez-le dans Réglages
 → Raccourcis clavier. Tout s'annule d'un seul `Ctrl + Z`, et la sélection
 reste active après coup.
 
@@ -79,6 +94,11 @@ de l'interrupteur « Espaces avant la ponctuation double ».
 | `l'été` | apostrophe typographique (si « Curly Quotes » est actif) |
 | `Ah...` | points de suspension `Ah…` (si « Ellipsis » est actif) |
 | `mot , suite` | espace parasite avant la virgule supprimée |
+| `enfin(frf)` | espace ajoutée avant la parenthèse (sauf `chat(s)`, `allié(e)`) |
+| `fin;suite` | espace ajoutée après `;` `!` `?` collé à une lettre |
+| `l ’ obscurité`, `l’ obscurité` | élision resserrée : `l’obscurité` |
+| `Fin. ` en bout de ligne | espace finale supprimée (deux espaces, saut de ligne Markdown, laissées) |
+| ligne faite d'espaces | espaces supprimées |
 
 La commande est idempotente : la relancer sur un texte déjà corrigé ne change
 rien. Elle ne touche jamais aux blocs et portions de code, aux formules, aux
@@ -137,6 +157,11 @@ laquelle, et la langue retenue pour la ligne.
 | guillemet ou apostrophe droit | `"non"`, `l'été` | selon la langue |
 | trait d'union entre espaces | `mot - mot` | `mot – mot` (`—` en russe et espagnol) |
 | espace doublée | `deux  espaces` | `deux espaces` |
+| `(` collée au mot qui précède | `enfin(frf)` | `enfin (frf)` (hors `chat(s)`, `allié(e)`) |
+| `;` `!` `?` collé à la lettre suivante | `fin;suite` | `fin; suite` |
+| élision avec espace | `l’ obscurité`, `l ’obscurité` | `l’obscurité` |
+| espace seule en fin de phrase, en bout de ligne | `Fin. ` | `Fin.` (le repère attend 5 s sur la ligne en cours de frappe) |
+| espaces seules sur une ligne vide | `   ` | ligne vide |
 
 **Par langue**
 
@@ -155,10 +180,11 @@ Les décimales (`3,5`), extensions (`a.md`), points de suspension, émoticônes
 protégées ne sont pas signalés. Les espaces doublées sont permises dans les
 tableaux (lignes qui commencent par `|`, ou bloc sans bordure qui contient une
 ligne `---|---`), dans l'indentation, après une puce, un numéro ou un `>`, et
-en fin de ligne, où deux espaces forcent un retour à la ligne. En français, une insécable déjà présente n'est
-jamais signalée ; une espace ordinaire qui la côtoie l'est. Les interrupteurs
-deux-points, guillemets et pourcentages s'appliquent au français, à la saisie
-comme au repérage.
+en fin de ligne, où deux espaces forcent un retour à la ligne. En français, une
+insécable déjà présente n'est jamais signalée ; une espace ordinaire qui la
+côtoie l'est. Chaque famille de règles se coupe langue par langue dans les
+réglages (voir [Réglages par langue](#réglages-ajoutés)). Le détail de tous les
+cas, langue par langue, est dans [REPERES.md](REPERES.md).
 
 C'est purement visuel, le texte n'est jamais modifié, et la commande de
 correction règle ce qui peut l'être — pas le `¿` manquant, dont elle ne sait

@@ -19,21 +19,27 @@ for (const name of ["fixTypography", "frenchRules", "languages"]) {
 }
 
 const { applyTypography, findFaultySigns, noteTypo } = await import(pathToFileURL(path.join(out, "fixTypography.mjs")).href);
-const { detectLanguage } = await import(pathToFileURL(path.join(out, "languages.mjs")).href);
+const { detectLanguage, defaultLangOptions } = await import(pathToFileURL(path.join(out, "languages.mjs")).href);
 const { FINE, NBSP, THIN } = await import(pathToFileURL(path.join(out, "frenchRules.mjs")).href);
 
-const settings = (over = {}) => ({
-	curlyQuotes: true,
-	ellipsis: true,
-	closeSingle: "’",
-	frenchSpacing: true,
-	frenchColon: true,
-	frenchGuillemets: true,
-	frenchPercent: true,
-	frNarrowSpace: FINE,
-	frNbSpace: NBSP,
-	...over,
-});
+// Anciens interrupteurs français, traduits en réglages par langue.
+const settings = (over = {}) => {
+	const { frenchColon, frenchGuillemets, frenchPercent, langOptions, ...rest } = over;
+	const options = langOptions ?? defaultLangOptions();
+	if (frenchColon !== undefined) options.fr.colon = frenchColon;
+	if (frenchGuillemets !== undefined) options.fr.guillemets = options.fr.quotes = frenchGuillemets;
+	if (frenchPercent !== undefined) options.fr.percent = frenchPercent;
+	return {
+		curlyQuotes: true,
+		ellipsis: true,
+		closeSingle: "’",
+		frenchSpacing: true,
+		langOptions: options,
+		frNarrowSpace: FINE,
+		frNbSpace: NBSP,
+		...rest,
+	};
+};
 
 const failures = [];
 const show = (v) =>
@@ -219,6 +225,33 @@ typoIn("es", '"hola"', "«hola»", "comillas latinas");
 check("ligne à ligne : français puis anglais",
 	applyTypography("Il a dit qu'il viendrait, mais il n'est pas venu ?\nI don't know what to do with this ?", settings(), { forced: null, fallback: "fr" }),
 	`Il a dit qu’il viendrait, mais il n’est pas venu${FINE}?\nI don’t know what to do with this?`);
+
+section("Réglages par langue");
+const optionsWith = (code, over) => {
+	const o = defaultLangOptions();
+	Object.assign(o[code], over);
+	return o;
+};
+check("langue coupée : rien n'est corrigé",
+	applyTypography("Quoi ?", settings({ langOptions: optionsWith("fr", { enabled: false }) }), FR), "Quoi ?");
+check("langue coupée : rien n'est signalé",
+	findFaultySigns("Quoi ?", settings({ langOptions: optionsWith("fr", { enabled: false }) }), FR).length, 0);
+check("une langue coupée n'affecte pas les autres",
+	applyTypography("Hello !", settings({ langOptions: optionsWith("fr", { enabled: false }) }), lang("en")), "Hello!");
+check("anglais : ponctuation coupée, deux-points gardé",
+	applyTypography("Hi ! Note :", settings({ langOptions: optionsWith("en", { punctuation: false }) }), lang("en")), "Hi ! Note:");
+check("anglais : deux-points coupé",
+	findFaultySigns("Note :", settings({ langOptions: optionsWith("en", { colon: false }) }), lang("en")).length, 0);
+check("général coupé : espaces doublées gardées",
+	applyTypography("a  b ( c )", settings({ langOptions: optionsWith("fr", { general: false }) }), FR), "a  b ( c )");
+check("guillemets français : espacement coupé, conversion gardée",
+	applyTypography('« a » "b"', settings({ langOptions: optionsWith("fr", { guillemets: false }) }), FR), `« a » «${FINE}b${FINE}»`);
+check("allemand : règles propres coupées",
+	applyTypography("z.B.", settings({ langOptions: optionsWith("de", { special: false }) }), lang("de")), "z.B.");
+check("tiret coupé",
+	applyTypography("mot - mot", settings({ langOptions: optionsWith("fr", { dash: false }) }), FR), "mot - mot");
+check("guillemets droits : conversion et repère coupés",
+	findFaultySigns('dit "oui"', settings({ langOptions: optionsWith("fr", { quotes: false }) }), FR).length, 0);
 
 section("Règles par langue : repérage");
 const signsIn = (code, text, expected, name) => uni(text, expected, `${code} : ${name}`, lang(code));

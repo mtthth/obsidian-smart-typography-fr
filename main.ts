@@ -55,6 +55,9 @@ import {
   LANGS,
   LANG_NAMES,
   Lang,
+  LangOptionKey,
+  LANG_OPTION_KEYS,
+  defaultLangOptions,
   detectLanguage,
   parseTypoSetting,
 } from "languages";
@@ -90,9 +93,7 @@ const DEFAULT_SETTINGS: SmartTypographySettings = {
   includedFolders: [],
 
   frenchSpacing: false,
-  frenchColon: true,
-  frenchGuillemets: true,
-  frenchPercent: true,
+  langOptions: defaultLangOptions(),
   flagWrongSpaces: true,
   defaultLanguage: "fr",
   frNarrowSpace: FINE,
@@ -130,18 +131,20 @@ export default class SmartTypography extends Plugin {
     // En tete : les regles << / >> francaises doivent primer sur
     // guillemetRules, qui partagent les memes declencheurs.
     if (this.settings.frenchSpacing) {
-      this.inputRules.push(...frenchGuardRules, ...frenchStopRules);
+      const fr = this.settings.langOptions.fr;
+      this.inputRules.push(...frenchGuardRules);
+      if (fr.punctuation) this.inputRules.push(...frenchStopRules);
 
-      if (this.settings.frenchGuillemets) {
+      if (fr.guillemets) {
         this.inputRules.push(...frenchGuillemetRules);
         if (this.settings.guillemets) {
           this.inputRules.push(...frenchAngleGuillemetRules);
         }
       }
-      if (this.settings.frenchColon) {
+      if (fr.colon) {
         this.inputRules.push(...frenchColonRules);
       }
-      if (this.settings.frenchPercent) {
+      if (fr.percent) {
         this.inputRules.push(...frenchPercentRules);
       }
     }
@@ -411,7 +414,10 @@ export default class SmartTypography extends Plugin {
             // If we're in a codeblock, etc, return early, no need to continue checking
             if (!canPerformReplacement(fromA)) return;
 
-            if (this.frenchInputRules.has(rule) && languageAt(fromA) !== "fr") {
+            if (
+              this.frenchInputRules.has(rule) &&
+              (languageAt(fromA) !== "fr" || !this.settings.langOptions.fr.enabled)
+            ) {
               continue;
             }
 
@@ -581,7 +587,29 @@ export default class SmartTypography extends Plugin {
   };
 
   async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    const data = (await this.loadData()) ?? {};
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+
+    // Réglages par langue : complétés langue par langue, pour qu'une famille de
+    // règles ajoutée plus tard prenne sa valeur par défaut.
+    const saved = data.langOptions ?? {};
+    this.settings.langOptions = defaultLangOptions();
+    for (const lang of LANGS) {
+      Object.assign(this.settings.langOptions[lang], saved[lang]);
+    }
+    // Anciens interrupteurs français, devenus des réglages de la langue fr.
+    const fr = this.settings.langOptions.fr;
+    if (saved.fr === undefined) {
+      if (typeof data.frenchColon === "boolean") fr.colon = data.frenchColon;
+      if (typeof data.frenchPercent === "boolean") fr.percent = data.frenchPercent;
+      if (typeof data.frenchGuillemets === "boolean") {
+        fr.guillemets = fr.quotes = data.frenchGuillemets;
+      }
+    }
+    const legacy = this.settings as unknown as Record<string, unknown>;
+    delete legacy.frenchColon;
+    delete legacy.frenchPercent;
+    delete legacy.frenchGuillemets;
     this.buildInputRules();
   }
 
@@ -639,6 +667,143 @@ class SmartTypographySettingTab extends PluginSettingTab {
   constructor(app: App, plugin: SmartTypography) {
     super(app, plugin);
     this.plugin = plugin;
+  }
+
+  // Langue dont les réglages sont affichés.
+  shownLang: Lang = "fr";
+
+  // Texte du réglage d'une famille de règles pour une langue.
+  optionInfo(lang: Lang, key: LangOptionKey): { name: string; desc: string } {
+    const none = "Aucune espace";
+    switch (key) {
+      case "general":
+        return {
+          name: "Espaces courantes",
+          desc: "Autour des parenthèses, virgules et points ; élision (l’obscurité) ; espaces doublées, espace en fin de phrase, lignes d'espaces seules.",
+        };
+      case "punctuation":
+        return lang === "fr"
+          ? {
+              name: "Avant ; ! ?",
+              desc: "Espace fine insécable. Joue aussi à la saisie si « Espaces avant la ponctuation double » est activé.",
+            }
+          : { name: "Avant ; ! ?", desc: `${none} devant ces signes.` };
+      case "colon":
+        return lang === "fr"
+          ? {
+              name: "Deux-points",
+              desc: "Espace insécable pleine (U+00A0) devant « : », conformément à l'usage de l'Imprimerie nationale. À désactiver si vous saisissez souvent des URL, des heures ou des champs Dataview.",
+            }
+          : { name: "Deux-points", desc: `${none} devant « : ».` };
+      case "guillemets":
+        return lang === "fr"
+          ? { name: "Guillemets « »", desc: "Espace fine après « et avant »." }
+          : { name: "Guillemets « »", desc: `${none} à l'intérieur de « ».` };
+      case "percent":
+        return {
+          name: "Pourcentages",
+          desc:
+            lang === "fr" || lang === "de" || lang === "es"
+              ? "Espace insécable entre le nombre et le signe % (50 %)."
+              : lang === "tr"
+              ? "Le signe % précède le nombre (%50)."
+              : "Pas d'espace entre le nombre et le signe % (50%).",
+        };
+      case "quotes": {
+        const style: Record<Lang, string> = {
+          fr: "« »",
+          en: "“ ”",
+          de: "„ “",
+          ru: "« »",
+          tr: "“ ”",
+          it: "« »",
+          es: "« »",
+        };
+        return {
+          name: "Guillemets droits",
+          desc: `Convertis en ${style[lang]} (hors français, si « Curly Quotes » est actif) ; apostrophes droites typographiques ; guillemets et apostrophes droits signalés.`,
+        };
+      }
+      case "dash":
+        return {
+          name: "Trait d'union entre espaces",
+          desc: `Remplacé par un tiret (${lang === "ru" || lang === "es" ? "—" : "–"}).`,
+        };
+      case "special":
+        return {
+          name: "Règles propres",
+          desc:
+            lang === "de"
+              ? "Abréviations espacées (z. B., d. h.)."
+              : lang === "it"
+              ? "È et non E'."
+              : "Pas d'espace après ¿ ou ¡ ; ¿ ou ¡ d'ouverture manquant.",
+        };
+    }
+  }
+
+  displayLanguage(containerEl: HTMLElement, lang: Lang) {
+    const options = this.plugin.settings.langOptions[lang];
+
+    new Setting(containerEl)
+      .setName(`Vérifier le ${LANG_NAMES[lang]}`)
+      .setDesc(
+        "Décoché, les lignes reconnues dans cette langue ne sont ni repérées, ni corrigées, ni complétées à la saisie."
+      )
+      .addToggle((toggle) => {
+        toggle.setValue(options.enabled).onChange(async (value) => {
+          options.enabled = value;
+          await this.plugin.saveSettings();
+          this.display();
+        });
+      });
+
+    if (!options.enabled) return;
+
+    if (lang === "fr") {
+      new Setting(containerEl)
+        .setName("Espaces avant la ponctuation double")
+        .setDesc(
+          "Insère à la frappe une espace fine insécable (U+202F) devant ; ! ? et », sur les lignes reconnues comme françaises. Les familles ci-dessous (deux-points, guillemets, pourcentages) règlent aussi la saisie."
+        )
+        .addToggle((toggle) => {
+          toggle
+            .setValue(this.plugin.settings.frenchSpacing)
+            .onChange(async (value) => {
+              this.plugin.settings.frenchSpacing = value;
+              await this.plugin.saveSettings();
+            });
+        });
+
+      new Setting(containerEl)
+        .setName("Caractère d'espace fine")
+        .setDesc(
+          "U+202F est la forme correcte. Basculez sur U+00A0 si votre police de travail ne la rend pas."
+        )
+        .addDropdown((dd) => {
+          dd.addOption(FINE, "Fine insécable (U+202F)")
+            .addOption(NBSP, "Insécable (U+00A0)")
+            .addOption(THIN, "Fine sécable (U+2009)")
+            .setValue(this.plugin.settings.frNarrowSpace)
+            .onChange(async (value) => {
+              this.plugin.settings.frNarrowSpace = value;
+              await this.plugin.saveSettings();
+            });
+        });
+    }
+
+    for (const key of LANG_OPTION_KEYS[lang]) {
+      const { name, desc } = this.optionInfo(lang, key);
+      new Setting(containerEl)
+        .setName(name)
+        .setDesc(desc)
+        .addToggle((toggle) => {
+          toggle.setValue(options[key]).onChange(async (value) => {
+            options[key] = value;
+            await this.plugin.saveSettings();
+          });
+        });
+    }
   }
 
   display(): void {
@@ -716,79 +881,23 @@ class SmartTypographySettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Typographie française")
+      .setName("Réglages par langue")
       .setHeading();
 
     new Setting(containerEl)
-      .setName("Espaces avant la ponctuation double")
+      .setName("Langue")
       .setDesc(
-        "Insère à la frappe une espace fine insécable (U+202F) devant ; ! ? et », sur les lignes reconnues comme françaises"
+        "Chaque famille de règles se coupe langue par langue. Elle joue à la saisie (français seulement), à la correction de la sélection et au repérage rouge."
       )
-      .addToggle((toggle) => {
-        toggle
-          .setValue(this.plugin.settings.frenchSpacing)
-          .onChange(async (value) => {
-            this.plugin.settings.frenchSpacing = value;
-            await this.plugin.saveSettings();
-            this.display();
-          });
+      .addDropdown((dd) => {
+        for (const lang of LANGS) dd.addOption(lang, LANG_NAMES[lang]);
+        dd.setValue(this.shownLang).onChange((value) => {
+          this.shownLang = value as Lang;
+          this.display();
+        });
       });
 
-    if (this.plugin.settings.frenchSpacing) {
-      new Setting(containerEl)
-        .setName("Caractère d'espace fine")
-        .setDesc(
-          "U+202F est la forme correcte. Basculez sur U+00A0 si votre police de travail ne la rend pas."
-        )
-        .addDropdown((dd) => {
-          dd.addOption(FINE, "Fine insécable (U+202F)")
-            .addOption(NBSP, "Insécable (U+00A0)")
-            .addOption(THIN, "Fine sécable (U+2009)")
-            .setValue(this.plugin.settings.frNarrowSpace)
-            .onChange(async (value) => {
-              this.plugin.settings.frNarrowSpace = value;
-              await this.plugin.saveSettings();
-            });
-        });
-
-      new Setting(containerEl)
-        .setName("Deux-points")
-        .setDesc(
-          "Espace insécable pleine (U+00A0) devant « : », conformément à l'usage de l'Imprimerie nationale. À désactiver si vous saisissez souvent des URL, des heures ou des champs Dataview."
-        )
-        .addToggle((toggle) => {
-          toggle
-            .setValue(this.plugin.settings.frenchColon)
-            .onChange(async (value) => {
-              this.plugin.settings.frenchColon = value;
-              await this.plugin.saveSettings();
-            });
-        });
-
-      new Setting(containerEl)
-        .setName("Guillemets")
-        .setDesc("Espace fine après « et avant »")
-        .addToggle((toggle) => {
-          toggle
-            .setValue(this.plugin.settings.frenchGuillemets)
-            .onChange(async (value) => {
-              this.plugin.settings.frenchGuillemets = value;
-              await this.plugin.saveSettings();
-            });
-        });
-
-      new Setting(containerEl)
-        .setName("Pourcentages")
-        .setDesc("Espace insécable entre le nombre et le signe % (50 %)")
-        .addToggle((toggle) => {
-          toggle
-            .setValue(this.plugin.settings.frenchPercent)
-            .onChange(async (value) => {
-              this.plugin.settings.frenchPercent = value;
-              await this.plugin.saveSettings();
-            });
-        });
-    }
+    this.displayLanguage(containerEl, this.shownLang);
 
     new Setting(containerEl)
       .setName("Curly Quotes")
