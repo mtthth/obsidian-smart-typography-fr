@@ -448,6 +448,11 @@ export default class SmartTypography extends Plugin {
             const replacementLength = rule.from.length - rule.trigger.length;
             const insertionPoint = fromA - replacementLength;
             const reversionPoint = fromB - replacementLength;
+            // Le retour arrière rétablit le texte réellement remplacé, et non
+            // rule.from : les garde-fous français y écrivent une fine U+202F,
+            // alors que l'espace en place suit le réglage (U+00A0, U+2009…).
+            const original =
+              tr.startState.doc.sliceString(insertionPoint, fromA) + insertedText;
 
             registerChange(
               {
@@ -458,7 +463,7 @@ export default class SmartTypography extends Plugin {
               {
                 from: reversionPoint,
                 to: reversionPoint + insert.length,
-                insert: rule.from,
+                insert: original,
               }
             );
 
