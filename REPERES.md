@@ -55,13 +55,13 @@ Les portions protégées : métadonnées, code (en ligne et en bloc), formules `
 | Guillemet ou apostrophe droit | `"mot"`, `l'été` | sous le signe |
 | Espace doublée entre deux signes | `deux  espaces` | sous la première espace en trop |
 | Espaces seules sur une ligne vide | une ligne faite d'une ou plusieurs espaces | sous la première espace |
-| Espace unique en fin de phrase, en bout de ligne | `Fin. ` + retour à la ligne | sous l'espace |
+| Une ou plusieurs espaces après une fin de phrase, en bout de ligne | `Fin. ` + retour à la ligne | sous l'espace |
 
 Précisions :
 
 - `chat(s)`, `allié(e)`, `(es)`, `(x)`, `(ée)`, `(ées)`, `(ne)`, `(nes)` ne sont pas signalés : la marque facultative reste collée au mot.
 - L'élision n'est reconnue qu'après `c d j l m n s t`, `qu`, `jusqu`, `lorsqu`, `puisqu` ou `quoiqu`, pour ne pas confondre avec un guillemet simple (`dit ‘oui’ à`).
-- L'espace doublée n'est pas signalée dans un tableau, après une puce, un numéro, une case à cocher ou un `>` de citation (l'alignement est voulu), ni devant une ponctuation : c'est alors la règle de cette ponctuation qui s'applique. Les deux espaces en fin de ligne (saut de ligne Markdown) sont laissées.
+- L'espace doublée n'est pas signalée dans un tableau, après une puce, un numéro, une case à cocher ou un `>` de citation (l'alignement est voulu), ni devant une ponctuation : c'est alors la règle de cette ponctuation qui s'applique. Les deux espaces en fin de ligne (saut de ligne Markdown) sont laissées, sauf après une fin de phrase.
 - Une puce vide (`1. `, `- `) n'est pas une fin de phrase.
 - Le repère de fin de phrase n'apparaît sur la ligne en cours de frappe que 5 secondes après la dernière frappe, pour ne pas clignoter à chaque point suivi d'une espace.
 

@@ -200,6 +200,7 @@ typo("a\n \nb", "a\n\nb", "une seule espace sur une ligne vide");
 typo("certaine ; l’ obscurité et l ’obscurité, dit 'oui' à", `certaine${FINE}; l’obscurité et l’obscurité, dit ’oui’ à`, "espace d'un seul côté de l'élision");
 check("repérage de l'élision d'un seul côté", findFaultySigns("l’ o et l ’o", settings(), FR).map(({ pos, side }) => [pos, side]), [[1, "after"], [10, "before"]]);
 unchanged("fin  \nsuite", "saut de ligne Markdown laissé");
+typo("Fin.  \nsuite", "Fin.\nsuite", "plusieurs espaces après une fin de phrase");
 unchanged("1. \n- \nx", "puces vides épargnées");
 unchanged("```\n   \n```", "ligne d'espaces dans un bloc de code");
 check("repérage de l'exemple complet",

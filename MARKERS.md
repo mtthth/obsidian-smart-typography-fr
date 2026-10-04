@@ -55,13 +55,13 @@ Protected portions: front matter, code (inline and fenced), `$…$` formulas, `[
 | Straight quote or apostrophe | `"word"`, `l'été` | under the sign |
 | Doubled space between two signs | `two  spaces` | under the first surplus space |
 | Spaces alone on an empty line | a line made of one or more spaces | under the first space |
-| Single space ending a sentence at the end of a line | `End. ` + line break | under the space |
+| One or more spaces after the end of a sentence, at the end of a line | `End. ` + line break | under the space |
 
 Details:
 
 - `chat(s)`, `allié(e)`, `(es)`, `(x)`, `(ée)`, `(ées)`, `(ne)`, `(nes)` are not flagged: the optional ending stays stuck to the word.
 - Elision is only recognised after `c d j l m n s t`, `qu`, `jusqu`, `lorsqu`, `puisqu` or `quoiqu`, so as not to mistake it for a single quotation mark (`said ‘yes’ to`).
-- Doubled spaces are not flagged in a table, after a bullet, a number, a checkbox or a `>` quote marker (alignment is intentional), nor before punctuation: that punctuation's own rule applies then. Two trailing spaces (a Markdown line break) are left alone.
+- Doubled spaces are not flagged in a table, after a bullet, a number, a checkbox or a `>` quote marker (alignment is intentional), nor before punctuation: that punctuation's own rule applies then. Two trailing spaces (a Markdown line break) are left alone, except after the end of a sentence.
 - An empty bullet (`1. `, `- `) does not end a sentence.
 - The end-of-sentence marker only shows on the line being typed 5 seconds after the last keystroke, so that it does not flicker at each full stop followed by a space.
 

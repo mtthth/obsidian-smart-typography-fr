@@ -206,11 +206,11 @@ function doubleSpaces(text: string, spans: [number, number][]): [number, number]
 }
 
 // Espaces de bord de ligne : une suite d'espaces seule sur sa ligne, et une
-// espace unique après une fin de phrase en bout de ligne (à deux espaces ou
-// plus, c'est un saut de ligne Markdown, laissé). Dans les deux cas, rien à
-// garder : la correction les supprime.
+// ou plusieurs espaces après une fin de phrase en bout de ligne (même un saut
+// de ligne Markdown : après une fin de phrase, il est superflu). Dans les deux
+// cas, rien à garder : la correction les supprime.
 const EDGE_SPACE_SOURCE =
-  "^[ \\t]+(?=\\r?$)|(?<=[.!?…»”])[ \\t](?=\\r?$)";
+  "^[ \\t]+(?=\\r?$)|(?<=[.!?…»”])[ \\t]+(?=\\r?$)";
 
 type EdgeKind = "blank-line" | "line-end";
 
