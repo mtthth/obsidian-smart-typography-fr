@@ -9,7 +9,7 @@
  * réutilisé sous la licence MIT, aux mêmes conditions que frenchRules.ts.
  */
 
-import { Lang, detectLanguage, parseTypoSetting } from "languages";
+import { Lang, LangOptionKey, detectLanguage, parseTypoSetting } from "languages";
 import { SmartTypographySettings } from "types";
 
 // Portions que la correction ne doit jamais toucher : code, maths, liens, URL.
@@ -297,51 +297,57 @@ interface TypoRule {
 function rulesFor(s: SmartTypographySettings, lang: Lang): TypoRule[] {
   const fine = s.frNarrowSpace;
   const nb = s.frNbSpace;
+  const o = s.langOptions[lang];
   const rules: TypoRule[] = [];
+  if (!o.enabled) return rules;
   const rule = (pattern: string, replacement: string, flags = "g") =>
     rules.push({ pattern: new RegExp(pattern, flags), replacement });
 
   // Guillemets droits appariés sur une même ligne.
-  if (lang === "fr" ? s.frenchGuillemets : s.curlyQuotes) {
+  if (o.quotes && (lang === "fr" || s.curlyQuotes)) {
     const [open, close] =
       lang === "fr" ? [`«${fine}`, `${fine}»`] : QUOTES[lang];
     rule('"([^"\\n]*)"', `${open}$1${close}`);
   }
-  if (lang === "de") rule("“([^”\\n]*)”", "„$1“");
-  if (lang === "it") rule(`(?<!${LETTER})E['’](?=${H})`, "È");
-  if (s.curlyQuotes) rule("'", s.closeSingle);
-  // Apostrophe d'élision isolée entre deux espaces : « l ’ obscurité ».
-  rule(`(${LETTER})${H}+(['’])${H}+(?=${LETTER})`, "$1$2");
-  // Une seule espace, après ou avant un mot d'élision : « l’ obscurité », « l ’obscurité ».
-  rule(`(${ELISION}['’])${H}+(?=${LETTER})`, "$1");
-  rule(`(${ELISION})${H}+(?=['’]${LETTER})`, "$1");
+  if (lang === "de" && o.quotes) rule("“([^”\\n]*)”", "„$1“");
+  if (lang === "it" && o.special) rule(`(?<!${LETTER})E['’](?=${H})`, "È");
+  if (o.quotes && s.curlyQuotes) rule("'", s.closeSingle);
+  if (o.general) {
+    // Apostrophe d'élision isolée entre deux espaces : « l ’ obscurité ».
+    rule(`(${LETTER})${H}+(['’])${H}+(?=${LETTER})`, "$1$2");
+    // Une seule espace, après ou avant un mot d'élision : « l’ obscurité », « l ’obscurité ».
+    rule(`(${ELISION}['’])${H}+(?=${LETTER})`, "$1");
+    rule(`(${ELISION})${H}+(?=['’]${LETTER})`, "$1");
+  }
   if (s.ellipsis) rule("\\.\\.\\.", "…");
 
   // Couche universelle.
-  rule(`${H}+,`, ",");
-  rule(`\\(${H}+(?=\\S)`, "(");
-  rule(`(\\S)${H}+\\)`, "$1)");
-  rule(`(\\S)${H}+([.,])${END_OF_SENTENCE}`, "$1$2");
-  rule(`(${LETTER},)(?=${LETTER})`, "$1 ");
-  rule(`([;!?]+)(?=${LETTER})`, "$1 ");
-  rule(`(${LETTER})\\((?!${PLURAL_MARK}\\))`, "$1 (");
-  rule(`([^\\s|-]${H}+)-(?=${H}+[^\\s|-])`, `$1${DASHES[lang]}`);
+  if (o.general) {
+    rule(`${H}+,`, ",");
+    rule(`\\(${H}+(?=\\S)`, "(");
+    rule(`(\\S)${H}+\\)`, "$1)");
+    rule(`(\\S)${H}+([.,])${END_OF_SENTENCE}`, "$1$2");
+    rule(`(${LETTER},)(?=${LETTER})`, "$1 ");
+    rule(`([;!?]+)(?=${LETTER})`, "$1 ");
+    rule(`(${LETTER})\\((?!${PLURAL_MARK}\\))`, "$1 (");
+  }
+  if (o.dash) rule(`([^\\s|-]${H}+)-(?=${H}+[^\\s|-])`, `$1${DASHES[lang]}`);
 
   if (lang === "fr") {
     // Avant ; ! ? : les suites comme « ?! » n'en reçoivent qu'une seule, et un
     // signe en début de ligne est laissé tel quel.
-    rule(`(\\S)${H}*([;!?]+)`, `$1${fine}$2`);
-    if (s.frenchPercent) {
+    if (o.punctuation) rule(`(\\S)${H}*([;!?]+)`, `$1${fine}$2`);
+    if (o.percent) {
       // Un « %% », délimiteur de commentaire Obsidian, n'est pas un pourcentage.
       rule(`(\\d)${H}*%(?!%)`, `$1${nb}%`);
     }
-    if (s.frenchColon) {
+    if (o.colon) {
       // Uniquement si le deux-points termine un mot et est suivi d'une espace,
       // d'une fin de ligne ou d'un marqueur d'emphase : 12:30, key::value,
       // C:\dossier et les URL restent intacts.
       rule(`([^\\s:])${H}*:(?=${H}|[*_]|$)`, `$1${nb}:`, "gm");
     }
-    if (s.frenchGuillemets) {
+    if (o.guillemets) {
       rule(`«${H}*(\\S)`, `«${fine}$1`);
       rule(`(\\S)${H}*»`, `$1${fine}»`);
     }
@@ -349,18 +355,23 @@ function rulesFor(s: SmartTypographySettings, lang: Lang): TypoRule[] {
   }
 
   // Hors du français, aucune espace avant ; : ! ?
-  rule(`(\\S)${H}+([!?]+)${STOP_END}`, "$1$2", "gm");
-  rule(`(\\S)${H}+([;:])${COLON_END}`, "$1$2", "gm");
+  if (o.punctuation) {
+    rule(`(\\S)${H}+([!?]+)${STOP_END}`, "$1$2", "gm");
+    rule(`(\\S)${H}+(;)${COLON_END}`, "$1$2", "gm");
+  }
+  if (o.colon) rule(`(\\S)${H}+(:)${COLON_END}`, "$1$2", "gm");
 
-  if (TIGHT_GUILLEMETS.includes(lang)) {
+  if (o.guillemets && TIGHT_GUILLEMETS.includes(lang)) {
     rule(`«${H}+(?=\\S)`, "«");
     rule(`(\\S)${H}+»`, "$1»");
   }
-  if (lang === "en" || lang === "it") rule(`(\\d)${H}+%(?!%)`, "$1%");
-  if (lang === "de" || lang === "es") rule(`(\\d)${H}*%(?!%)`, `$1${NBSP_CHAR}%`);
-  if (lang === "tr") rule(`(\\d+(?:[.,]\\d+)*)${H}*%(?!%)`, "%$1");
-  if (lang === "es") rule(`([¿¡])${H}+(?=\\S)`, "$1");
-  if (lang === "de") {
+  if (o.percent) {
+    if (lang === "en" || lang === "it") rule(`(\\d)${H}+%(?!%)`, "$1%");
+    if (lang === "de" || lang === "es") rule(`(\\d)${H}*%(?!%)`, `$1${NBSP_CHAR}%`);
+    if (lang === "tr") rule(`(\\d+(?:[.,]\\d+)*)${H}*%(?!%)`, "%$1");
+  }
+  if (lang === "es" && o.special) rule(`([¿¡])${H}+(?=\\S)`, "$1");
+  if (lang === "de" && o.special) {
     rule(`(?<![A-Za-zÄÖÜäöüß])([a-zäöü]\\.)(?=[A-Za-zÄÖÜäöü]\\.)`, `$1${fine}`);
   }
   return rules;
@@ -373,10 +384,17 @@ export function applyTypography(
   ctx: LangContext
 ): string {
   const outer = protectedRanges(text);
+  const langAt0 = languageResolver(text, outer, ctx);
+  const general = (pos: number) => {
+    const o = s.langOptions[langAt0(pos)];
+    return o.enabled && o.general;
+  };
   const edits = [
     ...doubleSpaces(text, outer).map(([start, end]) => ({ start, end, repl: " " })),
     ...edgeSpaces(text, outer).map(({ start, end }) => ({ start, end, repl: "" })),
-  ].sort((a, b) => a.start - b.start);
+  ]
+    .filter(({ start }) => general(start))
+    .sort((a, b) => a.start - b.start);
   let collapsed = "";
   let previous = 0;
   for (const { start, end, repl } of edits) {
@@ -463,7 +481,8 @@ interface Check {
   flags?: string;
   // Absent : toutes les langues.
   langs?: Lang[];
-  when?: (s: SmartTypographySettings, lang: Lang) => boolean;
+  // Famille de règles du réglage par langue qui commande ce repère.
+  opt?: LangOptionKey;
 }
 
 const NOT_FRENCH: Lang[] = ["en", "de", "ru", "tr", "it", "es"];
@@ -473,43 +492,44 @@ const CHECKS: Check[] = [
   // autorise un retour à la ligne devant la ponctuation. Une insécable déjà
   // présente n'est jamais signalée, mais ne rachète pas une espace ordinaire
   // qui la côtoie. Avant ; ! ? — un « ! » suivi de « [ » ouvre une intégration.
-  { mode: "space", side: "before", reason: "nbsp", langs: ["fr"], pattern: "(?<=\\S[^\\S\\r\\n]*)[ \\t]+(?=([^\\S\\r\\n]*)(?:[;?]|!(?!\\[)))" },
-  { mode: "space", side: "before", reason: "nbsp", langs: ["fr", "de", "es"], when: (s, l) => l !== "fr" || s.frenchPercent, pattern: "(?<=\\d[^\\S\\r\\n]*)[ \\t]+(?=([^\\S\\r\\n]*)%(?!%))" },
-  { mode: "space", side: "before", reason: "nbsp", langs: ["fr"], when: (s) => s.frenchColon, flags: "gm", pattern: "(?<=[^\\s:][^\\S\\r\\n]*)[ \\t]+(?=([^\\S\\r\\n]*):(?:[ \\t]|[*_]|$))" },
-  { mode: "space", side: "after", reason: "nbsp", langs: ["fr"], when: (s) => s.frenchGuillemets, pattern: "(?<=«([^\\S\\r\\n]*))[ \\t]+(?=[^\\S\\r\\n]*\\S)" },
-  { mode: "space", side: "before", reason: "nbsp", langs: ["fr"], when: (s) => s.frenchGuillemets, pattern: "(?<=\\S[^\\S\\r\\n]*)[ \\t]+(?=([^\\S\\r\\n]*)»)" },
+  { mode: "space", opt: "punctuation", side: "before", reason: "nbsp", langs: ["fr"], pattern: "(?<=\\S[^\\S\\r\\n]*)[ \\t]+(?=([^\\S\\r\\n]*)(?:[;?]|!(?!\\[)))" },
+  { mode: "space", opt: "percent", side: "before", reason: "nbsp", langs: ["fr", "de", "es"], pattern: "(?<=\\d[^\\S\\r\\n]*)[ \\t]+(?=([^\\S\\r\\n]*)%(?!%))" },
+  { mode: "space", opt: "colon", side: "before", reason: "nbsp", langs: ["fr"], flags: "gm", pattern: "(?<=[^\\s:][^\\S\\r\\n]*)[ \\t]+(?=([^\\S\\r\\n]*):(?:[ \\t]|[*_]|$))" },
+  { mode: "space", opt: "guillemets", side: "after", reason: "nbsp", langs: ["fr"], pattern: "(?<=«([^\\S\\r\\n]*))[ \\t]+(?=[^\\S\\r\\n]*\\S)" },
+  { mode: "space", opt: "guillemets", side: "before", reason: "nbsp", langs: ["fr"], pattern: "(?<=\\S[^\\S\\r\\n]*)[ \\t]+(?=([^\\S\\r\\n]*)»)" },
   // Français : insécable absente.
-  { mode: "missing", side: "before", reason: "nbsp", langs: ["fr"], pattern: "(?<=[^\\s;!?])(?=[;?]|!(?!\\[))" },
-  { mode: "missing", side: "before", reason: "nbsp", langs: ["fr", "de", "es"], when: (s, l) => l !== "fr" || s.frenchPercent, pattern: "(?<=\\d)(?=%(?!%))" },
-  { mode: "missing", side: "before", reason: "nbsp", langs: ["fr"], when: (s) => s.frenchColon, flags: "gm", pattern: "(?<=[^\\s:])(?=:(?:[ \\t]|[*_]|$))" },
-  { mode: "missing", side: "after", reason: "nbsp", langs: ["fr"], when: (s) => s.frenchGuillemets, pattern: "(?<=«)(?=[^\\s])" },
-  { mode: "missing", side: "before", reason: "nbsp", langs: ["fr"], when: (s) => s.frenchGuillemets, pattern: "(?<=[^\\s])(?=»)" },
+  { mode: "missing", opt: "punctuation", side: "before", reason: "nbsp", langs: ["fr"], pattern: "(?<=[^\\s;!?])(?=[;?]|!(?!\\[))" },
+  { mode: "missing", opt: "percent", side: "before", reason: "nbsp", langs: ["fr", "de", "es"], pattern: "(?<=\\d)(?=%(?!%))" },
+  { mode: "missing", opt: "colon", side: "before", reason: "nbsp", langs: ["fr"], flags: "gm", pattern: "(?<=[^\\s:])(?=:(?:[ \\t]|[*_]|$))" },
+  { mode: "missing", opt: "guillemets", side: "after", reason: "nbsp", langs: ["fr"], pattern: "(?<=«)(?=[^\\s])" },
+  { mode: "missing", opt: "guillemets", side: "before", reason: "nbsp", langs: ["fr"], pattern: "(?<=[^\\s])(?=»)" },
 
   // --- Universel.
-  { mode: "space", side: "after", reason: "space", pattern: `(?<=\\()${H}+(?=\\S)` },
-  { mode: "space", side: "before", reason: "space", pattern: `(?<=\\S)${H}+(?=\\))` },
-  { mode: "space", side: "before", reason: "space", pattern: `(?<=\\S)${H}+(?=[.,]${END_OF_SENTENCE})` },
-  { mode: "missing", side: "after", reason: "space", pattern: `(?<=${LETTER},)(?=${LETTER})` },
-  { mode: "missing", side: "after", reason: "space", pattern: `(?<=[;!?])(?=${LETTER})` },
-  { mode: "missing", side: "before", reason: "space", pattern: `(?<=${LETTER})(?=\\((?!${PLURAL_MARK}\\)))` },
-  { mode: "space", side: "before", reason: "space", pattern: `(?<=${ELISION})${H}+(?=['’]${LETTER})` },
-  { mode: "space", side: "after", reason: "space", pattern: `(?<=${ELISION}['’])${H}+(?=${LETTER})` },
-  { mode: "space", side: "before", reason: "space", pattern: `(?<=${LETTER})${H}+(?=['’]${H}+${LETTER})` },
-  { mode: "space", side: "after", reason: "space", pattern: `(?<=${LETTER}${H}+['’])${H}+(?=${LETTER})` },
-  { mode: "sign", side: "on", reason: "dash", pattern: `(?<=[^\\s|-]${H}+)-(?=${H}+[^\\s|-])` },
-  { mode: "sign", side: "on", reason: "quote", pattern: `["']` },
+  { mode: "space", opt: "general", side: "after", reason: "space", pattern: `(?<=\\()${H}+(?=\\S)` },
+  { mode: "space", opt: "general", side: "before", reason: "space", pattern: `(?<=\\S)${H}+(?=\\))` },
+  { mode: "space", opt: "general", side: "before", reason: "space", pattern: `(?<=\\S)${H}+(?=[.,]${END_OF_SENTENCE})` },
+  { mode: "missing", opt: "general", side: "after", reason: "space", pattern: `(?<=${LETTER},)(?=${LETTER})` },
+  { mode: "missing", opt: "general", side: "after", reason: "space", pattern: `(?<=[;!?])(?=${LETTER})` },
+  { mode: "missing", opt: "general", side: "before", reason: "space", pattern: `(?<=${LETTER})(?=\\((?!${PLURAL_MARK}\\)))` },
+  { mode: "space", opt: "general", side: "before", reason: "space", pattern: `(?<=${ELISION})${H}+(?=['’]${LETTER})` },
+  { mode: "space", opt: "general", side: "after", reason: "space", pattern: `(?<=${ELISION}['’])${H}+(?=${LETTER})` },
+  { mode: "space", opt: "general", side: "before", reason: "space", pattern: `(?<=${LETTER})${H}+(?=['’]${H}+${LETTER})` },
+  { mode: "space", opt: "general", side: "after", reason: "space", pattern: `(?<=${LETTER}${H}+['’])${H}+(?=${LETTER})` },
+  { mode: "sign", opt: "dash", side: "on", reason: "dash", pattern: `(?<=[^\\s|-]${H}+)-(?=${H}+[^\\s|-])` },
+  { mode: "sign", opt: "quotes", side: "on", reason: "quote", pattern: `["']` },
 
   // --- Hors du français : aucune espace avant ; : ! ?
-  { mode: "space", side: "before", reason: "no-space", langs: NOT_FRENCH, flags: "gm", pattern: `(?<=\\S)${H}+(?=[!?]+${STOP_END})` },
-  { mode: "space", side: "before", reason: "no-space", langs: NOT_FRENCH, flags: "gm", pattern: `(?<=\\S)${H}+(?=[;:]${COLON_END})` },
-  { mode: "space", side: "after", reason: "no-space", langs: TIGHT_GUILLEMETS, pattern: `(?<=«)${H}+(?=\\S)` },
-  { mode: "space", side: "before", reason: "no-space", langs: TIGHT_GUILLEMETS, pattern: `(?<=\\S)${H}+(?=»)` },
-  { mode: "space", side: "before", reason: "percent-none", langs: ["en", "it"], pattern: `(?<=\\d)${H}+(?=%(?!%))` },
-  { mode: "sign", side: "on", reason: "percent-tr", langs: ["tr"], pattern: `(?<=\\d${H}*)%(?!%)` },
-  { mode: "space", side: "after", reason: "no-space", langs: ["es"], pattern: `(?<=[¿¡])${H}+(?=\\S)` },
-  { mode: "sign", side: "on", reason: "de-quote", langs: ["de"], pattern: "”" },
-  { mode: "missing", side: "after", reason: "de-abbr", langs: ["de"], pattern: "(?<=(?<![A-Za-zÄÖÜäöüß])[a-zäöü]\\.)(?=[A-Za-zÄÖÜäöü]\\.)" },
-  { mode: "sign", side: "on", reason: "it-e", langs: ["it"], pattern: `(?<!${LETTER})E(?=['’]${H})` },
+  { mode: "space", opt: "punctuation", side: "before", reason: "no-space", langs: NOT_FRENCH, flags: "gm", pattern: `(?<=\\S)${H}+(?=[!?]+${STOP_END})` },
+  { mode: "space", opt: "punctuation", side: "before", reason: "no-space", langs: NOT_FRENCH, flags: "gm", pattern: `(?<=\\S)${H}+(?=[;]${COLON_END})` },
+  { mode: "space", opt: "colon", side: "before", reason: "no-space", langs: NOT_FRENCH, flags: "gm", pattern: `(?<=\\S)${H}+(?=:${COLON_END})` },
+  { mode: "space", opt: "guillemets", side: "after", reason: "no-space", langs: TIGHT_GUILLEMETS, pattern: `(?<=«)${H}+(?=\\S)` },
+  { mode: "space", opt: "guillemets", side: "before", reason: "no-space", langs: TIGHT_GUILLEMETS, pattern: `(?<=\\S)${H}+(?=»)` },
+  { mode: "space", opt: "percent", side: "before", reason: "percent-none", langs: ["en", "it"], pattern: `(?<=\\d)${H}+(?=%(?!%))` },
+  { mode: "sign", opt: "percent", side: "on", reason: "percent-tr", langs: ["tr"], pattern: `(?<=\\d${H}*)%(?!%)` },
+  { mode: "space", opt: "special", side: "after", reason: "no-space", langs: ["es"], pattern: `(?<=[¿¡])${H}+(?=\\S)` },
+  { mode: "sign", opt: "quotes", side: "on", reason: "de-quote", langs: ["de"], pattern: "”" },
+  { mode: "missing", opt: "special", side: "after", reason: "de-abbr", langs: ["de"], pattern: "(?<=(?<![A-Za-zÄÖÜäöüß])[a-zäöü]\\.)(?=[A-Za-zÄÖÜäöü]\\.)" },
+  { mode: "sign", opt: "special", side: "on", reason: "it-e", langs: ["it"], pattern: `(?<!${LETTER})E(?=['’]${H})` },
 ];
 
 // Signes fautifs, triés, chacun avec le côté où porte la faute, sa nature et
@@ -555,18 +575,26 @@ export function findFaultySigns(
 
       const lang = langAt(pos);
       if (check.langs && !check.langs.includes(lang)) continue;
-      if (check.when && !check.when(s, lang)) continue;
+      const o = s.langOptions[lang];
+      if (!o.enabled || (check.opt && !o[check.opt])) continue;
       signs.set(`${pos}:${check.side}`, { pos, side: check.side, reason: check.reason, lang });
     }
   }
 
+  const generalAt = (pos: number) => {
+    const o = s.langOptions[langAt(pos)];
+    return o.enabled && o.general;
+  };
+
   // Espaces doublées : le repère se pose sur la première espace en trop.
   for (const [start] of doubleSpaces(text, spans)) {
     const pos = start + 1;
+    if (!generalAt(pos)) continue;
     signs.set(`${pos}:on`, { pos, side: "on", reason: "double-space", lang: langAt(pos) });
   }
 
   for (const { start, kind } of edgeSpaces(text, spans)) {
+    if (!generalAt(start)) continue;
     signs.set(`${start}:on`, { pos: start, side: "on", reason: kind, lang: langAt(start) });
   }
 
@@ -580,6 +608,7 @@ export function findFaultySigns(
     if (sign === "!" && text[pos + 1] === "[") continue;
     if (pos > 0 && "?!".includes(text[pos - 1])) continue;
     if (inSpan(pos) || langAt(pos) !== "es") continue;
+    if (!s.langOptions.es.enabled || !s.langOptions.es.special) continue;
     const before = text.slice(text.lastIndexOf("\n", pos - 1) + 1, pos);
     const opener = sign === "?" ? "¿" : "¡";
     if (before.lastIndexOf(opener) <= before.lastIndexOf(sign)) {

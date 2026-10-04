@@ -125,3 +125,64 @@ export function parseTypoSetting(value: unknown): Lang | false | null {
   const code = v.slice(0, 2);
   return isLang(code) && (v.length === 2 || /^..[-_]/.test(v)) ? code : null;
 }
+
+/* ------------------------------------------------------------------ */
+/* Réglages par langue                                                 */
+/* ------------------------------------------------------------------ */
+
+// Familles de règles que l'on peut couper langue par langue. Toutes ne
+// s'appliquent pas à toutes les langues : voir LANG_OPTION_KEYS.
+export interface LangOptions {
+  // Faux : les lignes de cette langue ne sont ni repérées ni corrigées.
+  enabled: boolean;
+  // Espaces autour des parenthèses, virgules, points, élisions ; espaces
+  // doublées, fin de ligne, lignes vides.
+  general: boolean;
+  // Avant ; ! ? : insécable en français, aucune espace ailleurs.
+  punctuation: boolean;
+  // Avant : — mêmes règles que ci-dessus.
+  colon: boolean;
+  // Dans « » : fines en français, aucune espace en russe, turc, italien, espagnol.
+  guillemets: boolean;
+  // Entre le nombre et % (ou % avant le nombre en turc).
+  percent: boolean;
+  // Guillemets droits convertis, guillemets et apostrophes droits signalés.
+  quotes: boolean;
+  // Trait d'union entre espaces, remplacé par un tiret.
+  dash: boolean;
+  // Règles propres : z. B. (allemand), È (italien), ¿ ¡ (espagnol).
+  special: boolean;
+}
+
+export type LangOptionKey = Exclude<keyof LangOptions, "enabled">;
+
+export const DEFAULT_LANG_OPTIONS: LangOptions = {
+  enabled: true,
+  general: true,
+  punctuation: true,
+  colon: true,
+  guillemets: true,
+  percent: true,
+  quotes: true,
+  dash: true,
+  special: true,
+};
+
+// Familles de règles qui existent pour chaque langue.
+export const LANG_OPTION_KEYS: Record<Lang, LangOptionKey[]> = {
+  fr: ["general", "punctuation", "colon", "guillemets", "percent", "quotes", "dash"],
+  en: ["general", "punctuation", "colon", "percent", "quotes", "dash"],
+  de: ["general", "punctuation", "colon", "percent", "quotes", "dash", "special"],
+  ru: ["general", "punctuation", "colon", "guillemets", "quotes", "dash"],
+  tr: ["general", "punctuation", "colon", "guillemets", "percent", "quotes", "dash"],
+  it: ["general", "punctuation", "colon", "guillemets", "percent", "quotes", "dash", "special"],
+  es: ["general", "punctuation", "colon", "guillemets", "percent", "quotes", "dash", "special"],
+};
+
+export type LangOptionsMap = Record<Lang, LangOptions>;
+
+export function defaultLangOptions(): LangOptionsMap {
+  const map = {} as LangOptionsMap;
+  for (const lang of LANGS) map[lang] = { ...DEFAULT_LANG_OPTIONS };
+  return map;
+}

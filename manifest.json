@@ -1,7 +1,7 @@
 {
 	"id": "smart-typography-fr",
 	"name": "Smart Typography FR",
-	"version": "1.0.18",
+	"version": "1.1.0",
 	"minAppVersion": "0.15.0",
 	"description": "Typographie intelligente avec espaces insécables françaises, limitée aux dossiers choisis. D'après Smart Typography de mgmeyers.",
 	"author": "Matthieu Thomas (cidrolin)",
