@@ -210,7 +210,7 @@ function doubleSpaces(text: string, spans: [number, number][]): [number, number]
 // plus, c'est un saut de ligne Markdown, laissé). Dans les deux cas, rien à
 // garder : la correction les supprime.
 const EDGE_SPACE_SOURCE =
-  "^[ \\t]{2,}(?=\\r?$)|(?<=[.!?…»”])[ \\t](?=\\r?$)";
+  "^[ \\t]+(?=\\r?$)|(?<=[.!?…»”])[ \\t](?=\\r?$)";
 
 type EdgeKind = "blank-line" | "line-end";
 
@@ -251,6 +251,11 @@ const END_OF_SENTENCE = "(?![^\\s)\\]»”’“*_~\"'])";
 // écarte « ![[ », « :) », « ;) », « :--- » et « :smile: ».
 const STOP_END = "(?=[\\s)\\]»”’“*_~\"']|$)";
 const COLON_END = "(?=[\\s\\]»”’“*_~\"']|$)";
+
+// Mot d'élision (l', d', qu', jusqu'…), seul devant l'apostrophe : « dit ‘bonjour’ à »
+// n'en est pas un.
+const ELISION =
+  "(?<!" + LETTER + ")(?:[cdjlmnstCDJLMNST]|[Qq]u|[Jj]usqu|[Ll]orsqu|[Pp]uisqu|[Qq]uoiqu)";
 
 // Marque facultative collée au mot, qui n'appelle pas d'espace : chat(s), allié(e).
 const PLURAL_MARK = "(?:e|s|es|x|ée|ées|ne|nes)";
@@ -307,6 +312,9 @@ function rulesFor(s: SmartTypographySettings, lang: Lang): TypoRule[] {
   if (s.curlyQuotes) rule("'", s.closeSingle);
   // Apostrophe d'élision isolée entre deux espaces : « l ’ obscurité ».
   rule(`(${LETTER})${H}+(['’])${H}+(?=${LETTER})`, "$1$2");
+  // Une seule espace, après ou avant un mot d'élision : « l’ obscurité », « l ’obscurité ».
+  rule(`(${ELISION}['’])${H}+(?=${LETTER})`, "$1");
+  rule(`(${ELISION})${H}+(?=['’]${LETTER})`, "$1");
   if (s.ellipsis) rule("\\.\\.\\.", "…");
 
   // Couche universelle.
@@ -484,6 +492,8 @@ const CHECKS: Check[] = [
   { mode: "missing", side: "after", reason: "space", pattern: `(?<=${LETTER},)(?=${LETTER})` },
   { mode: "missing", side: "after", reason: "space", pattern: `(?<=[;!?])(?=${LETTER})` },
   { mode: "missing", side: "before", reason: "space", pattern: `(?<=${LETTER})(?=\\((?!${PLURAL_MARK}\\)))` },
+  { mode: "space", side: "before", reason: "space", pattern: `(?<=${ELISION})${H}+(?=['’]${LETTER})` },
+  { mode: "space", side: "after", reason: "space", pattern: `(?<=${ELISION}['’])${H}+(?=${LETTER})` },
   { mode: "space", side: "before", reason: "space", pattern: `(?<=${LETTER})${H}+(?=['’]${H}+${LETTER})` },
   { mode: "space", side: "after", reason: "space", pattern: `(?<=${LETTER}${H}+['’])${H}+(?=${LETTER})` },
   { mode: "sign", side: "on", reason: "dash", pattern: `(?<=[^\\s|-]${H}+)-(?=${H}+[^\\s|-])` },
