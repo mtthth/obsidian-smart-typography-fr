@@ -10,7 +10,7 @@ The triangle sits against the sign at fault:
 - **on its right**: it is behind the sign;
 - **underneath**: the sign itself is wrong.
 
-The command "Corriger la typographie de la sélection" (fix the typography of the selection) applies the same rules as the markers.
+The command "Fix typography in selection" applies the same rules as the markers.
 
 ## Which language?
 
@@ -23,18 +23,18 @@ Each line is recognised on its own, so a quotation in another language is tolera
 
 ## Switching markers off, language by language
 
-In the plugin settings, "Réglages par langue" (per-language settings) lets you pick a language and switch off families of rules. A family that is off is neither flagged nor corrected by the fix command; unticking "Vérifier le …" (check this language) switches everything off for that language (for French it also stops typing assistance).
+In the plugin settings, "Per-language settings" lets you pick a language and switch off families of rules. A family that is off is neither flagged nor corrected by the fix command; unticking "Check …" switches everything off for that language (for French it also stops typing assistance).
 
 | Family | Cases covered | Languages |
 |---|---|---|
-| Espaces courantes (general spacing) | parentheses, comma, full stop, elision, `;` `!` `?` stuck to the next word, doubled spaces, end of sentence, lines of spaces | all |
-| Avant `; ! ?` (before `; ! ?`) | space before the sign (non-breaking in French, none elsewhere) | all |
-| Deux-points (colon) | space before `:` | all |
+| Common spacing | parentheses, comma, full stop, elision, `;` `!` `?` stuck to the next word, doubled spaces, end of sentence, lines of spaces | all |
+| Before `; ! ?` | space before the sign (non-breaking in French, none elsewhere) | all |
+| Colon | space before `:` | all |
 | Guillemets « » | spaces inside the guillemets | fr, ru, tr, it, es |
-| Pourcentages (percent) | space or position of `%` | fr, en, de, tr, it, es |
-| Guillemets droits (straight quotes) | straight `"` `'`, German `”` | all |
-| Trait d'union entre espaces (hyphen between spaces) | `word - word` | all |
-| Règles propres (language-specific) | `z. B.` (de), `È` (it), `¿` `¡` (es) | de, it, es |
+| Percentages | space or position of `%` | fr, en, de, tr, it, es |
+| Straight quotes | straight `"` `'`, German `”` | all |
+| Hyphen between spaces | `word - word` | all |
+| Language-specific rules | `z. B.` (de), `È` (it), `¿` `¡` (es) | de, it, es |
 
 ## What is never flagged
 
@@ -71,9 +71,9 @@ The expected space is a **non-breaking** one (narrow non-breaking before `; ! ?`
 
 | Case | Faulty example | Marker | Setting |
 |---|---|---|---|
-| Before `;` `?` `!` | `Quoi ?` `Quoi?` | left of the sign | "Avant ; ! ?" |
-| Before `%` | `50 %` `50%` | left of the `%` | "Pourcentages" |
-| Before `:` | `Note :` `Note:` | left of the `:` | "Deux-points" |
+| Before `;` `?` `!` | `Quoi ?` `Quoi?` | left of the sign | "Before ; ! ?" |
+| Before `%` | `50 %` `50%` | left of the `%` | "Percentages" |
+| Before `:` | `Note :` `Note:` | left of the `:` | "Colon" |
 | After `«` | `« mot` `«mot` | right of the `«` | "Guillemets « »" |
 | Before `»` | `mot »` `mot»` | left of the `»` | "Guillemets « »" |
 

@@ -19,11 +19,13 @@ The manifest `id` (`smart-typography-fr`) differs from the original: Obsidian's 
 
 ## Added settings
 
-**Scope**: a "Limiter à certains dossiers" switch plus a list, one path per line, relative to the vault root, subfolders included, case-sensitive. Empty list = plugin inactive everywhere.
+**Interface language**: English (default) or French, for the settings, menus, notices and marker tooltips. Command names follow the next time Obsidian is reloaded.
 
-**Per-language settings**: a menu picks the language (French, English, German, Russian, Turkish, Italian, Spanish), then each family of rules can be switched on or off for it: general spacing, before `; ! ?`, colon, guillemets « », percent, straight quotes, hyphen between spaces, language-specific rules. "Vérifier le …" switches the whole language off. These settings drive the selection fix command and the red markers; for French they also drive typing. See [MARKERS.md](MARKERS.md) for the detail of each family. The former French switches (colon, guillemets, percent) are carried over as they were into the French language.
+**Scope**: a "Limit to some folders" switch plus a list, one path per line, relative to the vault root, subfolders included, case-sensitive. Empty list = plugin inactive everywhere.
 
-**French typing assistance**: off by default ("Espaces avant la ponctuation double", in the French settings). Once on:
+**Per-language settings**: a menu picks the language (French, English, German, Russian, Turkish, Italian, Spanish), then each family of rules can be switched on or off for it: common spacing, before `; ! ?`, colon, guillemets « », percentages, straight quotes, hyphen between spaces, language-specific rules. "Check …" switches the whole language off. These settings drive the selection fix command and the red markers; for French they also drive typing. See [MARKERS.md](MARKERS.md) for the detail of each family. The former French switches (colon, guillemets, percent) are carried over as they were into the French language.
+
+**French typing assistance**: off by default ("Spaces before double punctuation", in the French settings). Once on:
 
 | You type            | Result        | Space  |
 |---------------------|---------------|--------|
@@ -43,9 +45,9 @@ Punctuation following a closing mark also gets its space, placed after the mark:
 
 ## Fixing text that is already written
 
-The command **"Corriger la typographie de la sélection"** (command palette, and right-click when text is selected) applies in one go to the selected text the rules of each line's language (see [Languages](#languages)), with the same settings as typing: narrow space character, and the families of rules ticked for each language. It has no default shortcut; assign one in Settings → Hotkeys. Everything undoes with a single `Ctrl + Z`, and the selection stays active afterwards.
+The command **"Fix typography in selection"** (command palette, and right-click when text is selected) applies in one go to the selected text the rules of each line's language (see [Languages](#languages)), with the same settings as typing: narrow space character, and the families of rules ticked for each language. It has no default shortcut; assign one in Settings → Hotkeys. Everything undoes with a single `Ctrl + Z`, and the selection stays active afterwards.
 
-It is an explicit command: it does not depend on the folder scope, nor on the "Espaces avant la ponctuation double" switch.
+It is an explicit command: it does not depend on the folder scope, nor on the "Spaces before double punctuation" switch.
 
 | Example | Fix applied |
 |---------|-------------|
@@ -75,7 +77,7 @@ Each line is checked according to its language: French, English, German, Russian
 
 **Detection**: a line's language is recognised from its function words (le, the, der, ve, che, el…), its own letters (ß, ñ, ğ, ê…) and, for Russian, its alphabet. A line too short or too mixed takes the dominant language of the note; a note too short, the **default language** from the settings.
 
-**`smart-typo` property**: right-click in the note → "Langue typographique de la note…" (or the command of the same name) sets or removes the property; you can also write it by hand:
+**`smart-typo` property**: right-click in the note → "Note typography language…" (or the command of the same name) sets or removes the property; you can also write it by hand:
 
 | Value | Effect |
 |-------|--------|
@@ -87,7 +89,7 @@ Each line is checked according to its language: French, English, German, Russian
 
 ## Flagging typography faults
 
-Setting **"Signaler les fautes de typographie"** (on by default). In the scoped folders, a small red caret-shaped marker, slipped under the line against the faulty sign, flags the faults below. Its tooltip says which one, and the language retained for the line. The full list, language by language, is in [MARKERS.md](MARKERS.md).
+Setting **"Flag typography mistakes"** (on by default). In the scoped folders, a small red caret-shaped marker, slipped under the line against the faulty sign, flags the faults below. Its tooltip says which one, and the language retained for the line. The full list, language by language, is in [MARKERS.md](MARKERS.md).
 
 **All languages**
 

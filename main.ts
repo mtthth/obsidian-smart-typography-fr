@@ -53,14 +53,21 @@ import { TYPO_KEY, applyTypography, noteTypo } from "fixTypography";
 import { createSpacingMarkerPlugin, noteTypoOf } from "spacingMarkers";
 import {
   LANGS,
-  LANG_NAMES,
   Lang,
-  LangOptionKey,
   LANG_OPTION_KEYS,
   defaultLangOptions,
   detectLanguage,
   parseTypoSetting,
 } from "languages";
+import {
+  UI_LANGS,
+  UI_LANG_NAMES,
+  UiLang,
+  UiStrings,
+  capitalize,
+  isUiLang,
+  uiStrings,
+} from "i18n";
 import { syntaxTree } from "@codemirror/language";
 import * as cmLanguage from "@codemirror/language";
 
@@ -68,6 +75,8 @@ import { SmartTypographySettings } from "types";
 import { Tree } from "@lezer/common";
 
 const DEFAULT_SETTINGS: SmartTypographySettings = {
+  uiLanguage: "en",
+
   curlyQuotes: true,
   emDash: true,
   ellipsis: true,
@@ -114,6 +123,12 @@ export default class SmartTypography extends Plugin {
   // Tableau relu par Obsidian pour chaque éditeur : le modifier puis appeler
   // updateOptions() reconfigure les éditeurs ouverts sans recharger le plugin.
   private markerExtensions: Extension[] = [];
+
+  // Interface strings, read on each use so that a language change applies at
+  // once (command names excepted: Obsidian reads them only at load).
+  get t(): UiStrings {
+    return uiStrings(this.settings.uiLanguage);
+  }
 
   buildInputRules() {
     this.legacyInputRules = [];
@@ -239,7 +254,7 @@ export default class SmartTypography extends Plugin {
   }
 
   chooseNoteSetting(file: TFile) {
-    new TypoSettingModal(this.app, this.noteSetting(file), (value) =>
+    new TypoSettingModal(this.app, this.t, this.noteSetting(file), (value) =>
       this.setNoteSetting(file, value)
     ).open();
   }
@@ -254,13 +269,13 @@ export default class SmartTypography extends Plugin {
 
     this.addCommand({
       id: "fix-typography-in-selection",
-      name: "Corriger la typographie de la sélection",
+      name: this.t.fixSelection,
       editorCallback: (editor: Editor) => this.fixTypography(editor),
     });
 
     this.addCommand({
       id: "choose-note-typography",
-      name: "Langue typographique de la note",
+      name: this.t.noteLanguage,
       checkCallback: (checking: boolean) => {
         const file = this.app.workspace.getActiveFile();
         if (!file || file.extension !== "md") return false;
@@ -272,10 +287,11 @@ export default class SmartTypography extends Plugin {
     // Clic droit : l'entrée de correction n'apparaît que s'il y a une sélection.
     this.registerEvent(
       this.app.workspace.on("editor-menu", (menu, editor, info) => {
+        const t = this.t;
         if (editor.somethingSelected()) {
           menu.addItem((item) =>
             item
-              .setTitle("Corriger la typographie de la sélection")
+              .setTitle(t.fixSelection)
               .setIcon("text-cursor-input")
               .onClick(() => this.fixTypography(editor))
           );
@@ -286,13 +302,13 @@ export default class SmartTypography extends Plugin {
         const current = this.noteSetting(file);
         const label =
           current === false
-            ? "non vérifiée"
+            ? t.noteNotChecked
             : current
-            ? LANG_NAMES[current]
-            : "automatique";
+            ? t.langNames[current]
+            : t.noteAutomatic;
         menu.addItem((item) =>
           item
-            .setTitle(`Langue typographique de la note (${label})…`)
+            .setTitle(`${t.noteLanguage} (${label})…`)
             .setIcon("languages")
             .onClick(() => this.chooseNoteSetting(file))
         );
@@ -611,6 +627,7 @@ export default class SmartTypography extends Plugin {
         fr.guillemets = fr.quotes = data.frenchGuillemets;
       }
     }
+    if (!isUiLang(this.settings.uiLanguage)) this.settings.uiLanguage = "en";
     const legacy = this.settings as unknown as Record<string, unknown>;
     delete legacy.frenchColon;
     delete legacy.frenchPercent;
@@ -622,7 +639,7 @@ export default class SmartTypography extends Plugin {
   // explicite : elle ne dépend pas de la portée par dossier.
   fixTypography(editor: Editor) {
     if (!editor.somethingSelected()) {
-      new Notice("Sélectionnez d'abord le texte à corriger.");
+      new Notice(this.t.selectFirst);
       return;
     }
 
@@ -634,7 +651,7 @@ export default class SmartTypography extends Plugin {
     const atDocStart = from.line === 0 && from.ch === 0;
     const corrected = applyTypography(selection, this.settings, note, atDocStart);
     if (corrected === selection) {
-      new Notice("Rien à corriger dans cette sélection.");
+      new Notice(this.t.nothingToFix);
       return;
     }
 
@@ -643,7 +660,7 @@ export default class SmartTypography extends Plugin {
     // espaces invisibles.
     editor.replaceSelection(corrected);
     editor.setSelection(from, editor.getCursor());
-    new Notice("Typographie corrigée.");
+    new Notice(this.t.fixed);
   }
 
   // Le repère n'a de sens que si les règles françaises sont actives.
@@ -680,84 +697,14 @@ class SmartTypographySettingTab extends PluginSettingTab {
   // Langue dont les réglages sont affichés.
   shownLang: Lang = "fr";
 
-  // Texte du réglage d'une famille de règles pour une langue.
-  optionInfo(lang: Lang, key: LangOptionKey): { name: string; desc: string } {
-    const none = "Aucune espace";
-    switch (key) {
-      case "general":
-        return {
-          name: "Espaces courantes",
-          desc: "Autour des parenthèses, virgules et points ; élision (l’obscurité) ; espaces doublées, espace en fin de phrase, lignes d'espaces seules.",
-        };
-      case "punctuation":
-        return lang === "fr"
-          ? {
-              name: "Avant ; ! ?",
-              desc: "Espace fine insécable. Joue aussi à la saisie si « Espaces avant la ponctuation double » est activé.",
-            }
-          : { name: "Avant ; ! ?", desc: `${none} devant ces signes.` };
-      case "colon":
-        return lang === "fr"
-          ? {
-              name: "Deux-points",
-              desc: "Espace insécable pleine (U+00A0) devant « : », conformément à l'usage de l'Imprimerie nationale. À désactiver si vous saisissez souvent des URL, des heures ou des champs Dataview.",
-            }
-          : { name: "Deux-points", desc: `${none} devant « : ».` };
-      case "guillemets":
-        return lang === "fr"
-          ? { name: "Guillemets « »", desc: "Espace fine après « et avant »." }
-          : { name: "Guillemets « »", desc: `${none} à l'intérieur de « ».` };
-      case "percent":
-        return {
-          name: "Pourcentages",
-          desc:
-            lang === "fr" || lang === "de" || lang === "es"
-              ? "Espace insécable entre le nombre et le signe % (50 %)."
-              : lang === "tr"
-              ? "Le signe % précède le nombre (%50)."
-              : "Pas d'espace entre le nombre et le signe % (50%).",
-        };
-      case "quotes": {
-        const style: Record<Lang, string> = {
-          fr: "« »",
-          en: "“ ”",
-          de: "„ “",
-          ru: "« »",
-          tr: "“ ”",
-          it: "« »",
-          es: "« »",
-        };
-        return {
-          name: "Guillemets droits",
-          desc: `Convertis en ${style[lang]} (hors français, si « Curly Quotes » est actif) ; apostrophes droites typographiques ; guillemets et apostrophes droits signalés.`,
-        };
-      }
-      case "dash":
-        return {
-          name: "Trait d'union entre espaces",
-          desc: `Remplacé par un tiret (${lang === "ru" || lang === "es" ? "—" : "–"}).`,
-        };
-      case "special":
-        return {
-          name: "Règles propres",
-          desc:
-            lang === "de"
-              ? "Abréviations espacées (z. B., d. h.)."
-              : lang === "it"
-              ? "È et non E'."
-              : "Pas d'espace après ¿ ou ¡ ; ¿ ou ¡ d'ouverture manquant.",
-        };
-    }
-  }
-
   displayLanguage(containerEl: HTMLElement, lang: Lang) {
+    const t = this.plugin.t;
     const options = this.plugin.settings.langOptions[lang];
+    const check = t.checkLanguage(lang);
 
     new Setting(containerEl)
-      .setName(`Vérifier le ${LANG_NAMES[lang]}`)
-      .setDesc(
-        "Décoché, les lignes reconnues dans cette langue ne sont ni repérées, ni corrigées, ni complétées à la saisie."
-      )
+      .setName(check.name)
+      .setDesc(check.desc)
       .addToggle((toggle) => {
         toggle.setValue(options.enabled).onChange(async (value) => {
           options.enabled = value;
@@ -770,10 +717,8 @@ class SmartTypographySettingTab extends PluginSettingTab {
 
     if (lang === "fr") {
       new Setting(containerEl)
-        .setName("Espaces avant la ponctuation double")
-        .setDesc(
-          "Insère à la frappe une espace fine insécable (U+202F) devant ; ! ? et », sur les lignes reconnues comme françaises. Les familles ci-dessous (deux-points, guillemets, pourcentages) règlent aussi la saisie."
-        )
+        .setName(t.frenchSpacing.name)
+        .setDesc(t.frenchSpacing.desc)
         .addToggle((toggle) => {
           toggle
             .setValue(this.plugin.settings.frenchSpacing)
@@ -784,14 +729,12 @@ class SmartTypographySettingTab extends PluginSettingTab {
         });
 
       new Setting(containerEl)
-        .setName("Caractère d'espace fine")
-        .setDesc(
-          "U+202F est la forme correcte. Basculez sur U+00A0 si votre police de travail ne la rend pas."
-        )
+        .setName(t.narrowSpace.name)
+        .setDesc(t.narrowSpace.desc)
         .addDropdown((dd) => {
-          dd.addOption(FINE, "Fine insécable (U+202F)")
-            .addOption(NBSP, "Insécable (U+00A0)")
-            .addOption(THIN, "Fine sécable (U+2009)")
+          dd.addOption(FINE, t.narrowSpaceFine)
+            .addOption(NBSP, t.narrowSpaceNbsp)
+            .addOption(THIN, t.narrowSpaceThin)
             .setValue(this.plugin.settings.frNarrowSpace)
             .onChange(async (value) => {
               this.plugin.settings.frNarrowSpace = value;
@@ -801,7 +744,7 @@ class SmartTypographySettingTab extends PluginSettingTab {
     }
 
     for (const key of LANG_OPTION_KEYS[lang]) {
-      const { name, desc } = this.optionInfo(lang, key);
+      const { name, desc } = t.option(lang, key);
       new Setting(containerEl)
         .setName(name)
         .setDesc(desc)
@@ -816,16 +759,27 @@ class SmartTypographySettingTab extends PluginSettingTab {
 
   display(): void {
     let { containerEl } = this;
+    const t = this.plugin.t;
 
     containerEl.empty();
 
-    new Setting(containerEl).setName("Portée").setHeading();
+    new Setting(containerEl)
+      .setName(t.uiLanguage.name)
+      .setDesc(t.uiLanguage.desc)
+      .addDropdown((dd) => {
+        for (const lang of UI_LANGS) dd.addOption(lang, UI_LANG_NAMES[lang]);
+        dd.setValue(this.plugin.settings.uiLanguage).onChange(async (value) => {
+          this.plugin.settings.uiLanguage = value as UiLang;
+          await this.plugin.saveSettings();
+          this.display();
+        });
+      });
+
+    new Setting(containerEl).setName(t.scopeHeading).setHeading();
 
     new Setting(containerEl)
-      .setName("Limiter à certains dossiers")
-      .setDesc(
-        "Le plugin n'intervient que dans les dossiers listés ci-dessous, sous-dossiers compris."
-      )
+      .setName(t.limitToFolders.name)
+      .setDesc(t.limitToFolders.desc)
       .addToggle((toggle) => {
         toggle
           .setValue(this.plugin.settings.limitToFolders)
@@ -838,12 +792,10 @@ class SmartTypographySettingTab extends PluginSettingTab {
 
     if (this.plugin.settings.limitToFolders) {
       new Setting(containerEl)
-        .setName("Dossiers concernés")
-        .setDesc(
-          "Un chemin par ligne, relatif à la racine du coffre. Casse respectée. Liste vide = plugin inactif partout."
-        )
+        .setName(t.includedFolders.name)
+        .setDesc(t.includedFolders.desc)
         .addTextArea((ta) => {
-          ta.setPlaceholder("Écrits/Nouvelles\nÉditions Procuste")
+          ta.setPlaceholder(t.includedFoldersPlaceholder)
             .setValue(this.plugin.settings.includedFolders.join("\n"))
             .onChange(async (value) => {
               this.plugin.settings.includedFolders = value
@@ -857,15 +809,13 @@ class SmartTypographySettingTab extends PluginSettingTab {
         });
     }
 
-    new Setting(containerEl).setName("Langues").setHeading();
+    new Setting(containerEl).setName(t.languagesHeading).setHeading();
 
     new Setting(containerEl)
-      .setName("Langue par défaut")
-      .setDesc(
-        "Langue des lignes et des notes trop courtes pour être reconnues. La propriété smart-typo d'une note (fr, en, de, ru, tr, it, es) impose sa langue ; smart-typo: false coupe le repérage."
-      )
+      .setName(t.defaultLanguage.name)
+      .setDesc(t.defaultLanguage.desc)
       .addDropdown((dd) => {
-        for (const lang of LANGS) dd.addOption(lang, LANG_NAMES[lang]);
+        for (const lang of LANGS) dd.addOption(lang, capitalize(t.langNames[lang]));
         dd.setValue(this.plugin.settings.defaultLanguage).onChange(
           async (value) => {
             this.plugin.settings.defaultLanguage = value as Lang;
@@ -875,10 +825,8 @@ class SmartTypographySettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Signaler les fautes de typographie")
-      .setDesc(
-        "Marque d'un petit repère rouge, dans les dossiers concernés, les fautes de typographie selon la langue de chaque ligne ; l'info-bulle du repère dit laquelle. La commande « Corriger la typographie de la sélection » corrige ce qui peut l'être."
-      )
+      .setName(t.flagWrongSpaces.name)
+      .setDesc(t.flagWrongSpaces.desc)
       .addToggle((toggle) => {
         toggle
           .setValue(this.plugin.settings.flagWrongSpaces)
@@ -889,16 +837,14 @@ class SmartTypographySettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Réglages par langue")
+      .setName(t.perLanguageHeading)
       .setHeading();
 
     new Setting(containerEl)
-      .setName("Langue")
-      .setDesc(
-        "Chaque famille de règles se coupe langue par langue. Elle joue à la saisie (français seulement), à la correction de la sélection et au repérage rouge."
-      )
+      .setName(t.shownLanguage.name)
+      .setDesc(t.shownLanguage.desc)
       .addDropdown((dd) => {
-        for (const lang of LANGS) dd.addOption(lang, LANG_NAMES[lang]);
+        for (const lang of LANGS) dd.addOption(lang, capitalize(t.langNames[lang]));
         dd.setValue(this.shownLang).onChange((value) => {
           this.shownLang = value as Lang;
           this.display();
@@ -908,10 +854,8 @@ class SmartTypographySettingTab extends PluginSettingTab {
     this.displayLanguage(containerEl, this.shownLang);
 
     new Setting(containerEl)
-      .setName("Curly Quotes")
-      .setDesc(
-        "Double and single quotes will be converted to curly quotes (“” & ‘’)"
-      )
+      .setName(t.curlyQuotes.name)
+      .setDesc(t.curlyQuotes.desc)
       .addToggle((toggle) => {
         toggle
           .setValue(this.plugin.settings.curlyQuotes)
@@ -922,7 +866,7 @@ class SmartTypographySettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Open double quote character")
+      .setName(t.openDouble)
       .addText((text) => {
         text
           .setValue(this.plugin.settings.openDouble)
@@ -939,7 +883,7 @@ class SmartTypographySettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Close double quote character")
+      .setName(t.closeDouble)
       .addText((text) => {
         text
           .setValue(this.plugin.settings.closeDouble)
@@ -955,7 +899,7 @@ class SmartTypographySettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Open single quote character")
+      .setName(t.openSingle)
       .addText((text) => {
         text
           .setValue(this.plugin.settings.openSingle)
@@ -971,7 +915,7 @@ class SmartTypographySettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Close single quote character")
+      .setName(t.closeSingle)
       .addText((text) => {
         text
           .setValue(this.plugin.settings.closeSingle)
@@ -987,10 +931,8 @@ class SmartTypographySettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Dashes")
-      .setDesc(
-        "Two dashes (--) will be converted to an en-dash (–). And en-dash followed by a dash will be converted to and em-dash (—). An em-dash followed by a dash will be converted into three dashes (---)"
-      )
+      .setName(t.dashes.name)
+      .setDesc(t.dashes.desc)
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.emDash).onChange(async (value) => {
           this.plugin.settings.emDash = value;
@@ -999,10 +941,8 @@ class SmartTypographySettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Skip en-dash")
-      .setDesc(
-        "When enabled, two dashes will be converted to an em-dash rather than an en-dash."
-      )
+      .setName(t.skipEnDash.name)
+      .setDesc(t.skipEnDash.desc)
       .addToggle((toggle) => {
         toggle
           .setValue(this.plugin.settings.skipEnDash)
@@ -1013,8 +953,8 @@ class SmartTypographySettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Ellipsis")
-      .setDesc("Three periods (...) will be converted to an ellipses (…)")
+      .setName(t.ellipsis.name)
+      .setDesc(t.ellipsis.desc)
       .addToggle((toggle) => {
         toggle
           .setValue(this.plugin.settings.ellipsis)
@@ -1025,8 +965,8 @@ class SmartTypographySettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Guillemets")
-      .setDesc("<< | >> will be converted to « | »")
+      .setName(t.guillemets.name)
+      .setDesc(t.guillemets.desc)
       .addToggle((toggle) => {
         toggle
           .setValue(this.plugin.settings.guillemets)
@@ -1036,7 +976,7 @@ class SmartTypographySettingTab extends PluginSettingTab {
           });
       });
 
-    new Setting(containerEl).setName("Open guillemet").addText((text) => {
+    new Setting(containerEl).setName(t.openGuillemet).addText((text) => {
       text
         .setValue(this.plugin.settings.openGuillemet)
         .onChange(async (value) => {
@@ -1047,7 +987,7 @@ class SmartTypographySettingTab extends PluginSettingTab {
         });
     });
 
-    new Setting(containerEl).setName("Close guillemet").addText((text) => {
+    new Setting(containerEl).setName(t.closeGuillemet).addText((text) => {
       text
         .setValue(this.plugin.settings.closeGuillemet)
         .onChange(async (value) => {
@@ -1059,8 +999,8 @@ class SmartTypographySettingTab extends PluginSettingTab {
     });
 
     new Setting(containerEl)
-      .setName("Arrows")
-      .setDesc("<- | -> will be converted to ← | →")
+      .setName(t.arrows.name)
+      .setDesc(t.arrows.desc)
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.arrows).onChange(async (value) => {
           this.plugin.settings.arrows = value;
@@ -1068,7 +1008,7 @@ class SmartTypographySettingTab extends PluginSettingTab {
         });
       });
 
-    new Setting(containerEl).setName("Left arrow character").addText((text) => {
+    new Setting(containerEl).setName(t.leftArrow).addText((text) => {
       text.setValue(this.plugin.settings.leftArrow).onChange(async (value) => {
         if (!value) return;
         if (value.length > 1) {
@@ -1081,7 +1021,7 @@ class SmartTypographySettingTab extends PluginSettingTab {
     });
 
     new Setting(containerEl)
-      .setName("Right arrow character")
+      .setName(t.rightArrow)
       .addText((text) => {
         text
           .setValue(this.plugin.settings.rightArrow)
@@ -1097,8 +1037,8 @@ class SmartTypographySettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Comparison")
-      .setDesc("<= | >= | /= will be converted to ≤ | ≥ | ≠")
+      .setName(t.comparisons.name)
+      .setDesc(t.comparisons.desc)
       .addToggle((toggle) => {
         toggle
           .setValue(this.plugin.settings.comparisons)
@@ -1109,10 +1049,8 @@ class SmartTypographySettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Fractions")
-      .setDesc(
-        "1/2 will be converted to ½. Supported UTF-8 fractions: ½, ⅓, ⅔, ¼, ¾, ⅕, ⅖, ⅗, ⅘, ⅙, ⅚, ⅐, ⅛, ⅜, ⅝, ⅞, ⅑, ⅒"
-      )
+      .setName(t.fractions.name)
+      .setDesc(t.fractions.desc)
       .addToggle((toggle) => {
         toggle
           .setValue(this.plugin.settings.fractions)
@@ -1152,26 +1090,33 @@ function shouldCheckTextAtPos(
 
 type TypoChoice = { value: Lang | false | null; label: string };
 
-const TYPO_CHOICES: TypoChoice[] = [
-  { value: null, label: "Détection automatique" },
-  ...LANGS.map((lang) => ({ value: lang, label: LANG_NAMES[lang] })),
-  { value: false, label: "Ne pas vérifier la typographie" },
-];
+// Choices are built when the modal opens, in the current interface language.
+function typoChoices(t: UiStrings): TypoChoice[] {
+  return [
+    { value: null, label: t.autoDetection },
+    ...LANGS.map((lang) => ({ value: lang, label: capitalize(t.langNames[lang]) })),
+    { value: false, label: t.doNotCheck },
+  ];
+}
 
 // Choix de la propriété smart-typo d'une note ; le choix en vigueur est coché.
 class TypoSettingModal extends SuggestModal<TypoChoice> {
+  private choices: TypoChoice[];
+
   constructor(
     app: App,
+    t: UiStrings,
     private current: Lang | false | null,
     private onChoose: (value: Lang | false | null) => void
   ) {
     super(app);
-    this.setPlaceholder("Langue typographique de la note");
+    this.choices = typoChoices(t);
+    this.setPlaceholder(t.noteLanguage);
   }
 
   getSuggestions(query: string): TypoChoice[] {
     const q = query.toLowerCase();
-    return TYPO_CHOICES.filter((c) => c.label.toLowerCase().includes(q));
+    return this.choices.filter((c) => c.label.toLowerCase().includes(q));
   }
 
   renderSuggestion(choice: TypoChoice, el: HTMLElement) {

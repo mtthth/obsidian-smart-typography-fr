@@ -31,6 +31,11 @@ marchent dessus.
 
 ## Réglages ajoutés
 
+**Langue de l'interface** — anglais par défaut, ou français : réglages,
+menus, notifications et info-bulles des repères. Le nom des commandes suit
+au prochain rechargement d'Obsidian. Ce document cite les noms de
+l'interface française.
+
 **Portée** — un interrupteur « Limiter à certains dossiers » + une liste,
 un chemin par ligne, relatif à la racine du coffre, sous-dossiers compris,
 casse respectée. Liste vide = plugin inactif partout.
@@ -91,8 +96,8 @@ de l'interrupteur « Espaces avant la ponctuation double ».
 | `50 %` | espace insécable avant `%` (jamais avant `%%`, qui délimite un commentaire) |
 | `« citation »` | espaces fines à l'intérieur des guillemets |
 | `Il a dit "bonjour"` | guillemets droits appariés → `« bonjour »` |
-| `l'été` | apostrophe typographique (si « Curly Quotes » est actif) |
-| `Ah...` | points de suspension `Ah…` (si « Ellipsis » est actif) |
+| `l'été` | apostrophe typographique (si « Guillemets courbes » est actif) |
+| `Ah...` | points de suspension `Ah…` (si « Points de suspension » est actif) |
 | `mot , suite` | espace parasite avant la virgule supprimée |
 | `enfin(frf)` | espace ajoutée avant la parenthèse (sauf `chat(s)`, `allié(e)`) |
 | `fin;suite` | espace ajoutée après `;` `!` `?` collé à une lettre |
@@ -113,8 +118,8 @@ pas son espace, faute de contexte. Et sélectionner l'intérieur d'un bloc de
 métadonnées *sans* son `---` ouvrant fait perdre à la commande le seul indice
 qui le lui signale : les `clé: valeur` reçoivent alors une insécable.
 
-Hors du français, les guillemets droits ne sont convertis que si « Curly
-Quotes » est actif ; les traits d'union entre espaces deviennent des tirets.
+Hors du français, les guillemets droits ne sont convertis que si « Guillemets
+courbes » est actif ; les traits d'union entre espaces deviennent des tirets.
 
 ## Langues
 

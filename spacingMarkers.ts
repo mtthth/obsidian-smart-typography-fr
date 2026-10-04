@@ -15,38 +15,18 @@ import {
 } from "@codemirror/view";
 import {
   NoteTypo,
-  SignReason,
   SignSide,
   findFaultySigns,
   noteTypo,
 } from "fixTypography";
-import { LANG_NAMES, Lang } from "languages";
+import { uiStrings } from "i18n";
+import { Lang } from "languages";
 import { SmartTypographySettings } from "types";
 
 const MARKER_CLASSES: Record<SignSide, string> = {
   before: "smart-typography-fr-marker-before",
   after: "smart-typography-fr-marker-after",
   on: "smart-typography-fr-marker-on",
-};
-
-// Info-bulle portée par le signe lui-même : elle s'affiche au survol du signe
-// comme du caret dessiné contre lui.
-// La langue reconnue pour la ligne y est ajoutée.
-const MARKER_TITLES: Record<SignReason, string> = {
-  nbsp: "Espace insécable attendue ici.",
-  space: "Espace en trop ou manquante ici.",
-  quote: "Guillemet ou apostrophe droit : préférer la forme typographique.",
-  dash: "Trait d'union entre espaces : un tiret est attendu (– ou —).",
-  "double-space": "Espace doublée.",
-  "blank-line": "Espaces seules sur une ligne vide.",
-  "line-end": "Espace inutile en fin de ligne.",
-  "no-space": "Pas d'espace ici dans cette langue.",
-  "percent-none": "Pas d'espace entre le nombre et %.",
-  "percent-tr": "Le signe % précède le nombre : %50.",
-  "es-inverted": "Il manque le ¿ ou le ¡ d'ouverture.",
-  "de-quote": "Guillemet fermant allemand : “ et non ”.",
-  "de-abbr": "Abréviation : espace attendue (z. B.).",
-  "it-e": "« E' » s'écrit « È ».",
 };
 
 // Début de la note, métadonnées comprises, d'où sont tirées la propriété
@@ -114,6 +94,7 @@ export function createSpacingMarkerPlugin(
     if (!isInScope(view.state)) return builder.finish();
 
     const settings = getSettings();
+    const t = uiStrings(settings.uiLanguage);
     const note = noteTypoOf(view.state, settings.defaultLanguage);
     if (note.disabled) return builder.finish();
     const fmEnd = frontmatterEnd(view.state);
@@ -148,8 +129,11 @@ export function createSpacingMarkerPlugin(
           base + pos + 1,
           Decoration.mark({
             class: MARKER_CLASSES[side],
+            // The tooltip sits on the sign itself, so it shows when hovering
+            // the sign as well as the caret drawn against it. It names the
+            // language recognised for the line.
             attributes: {
-              title: `${MARKER_TITLES[reason]} (${LANG_NAMES[lang]})`,
+              title: `${t.markerTitles[reason]} (${t.langNames[lang]})`,
             },
           })
         );

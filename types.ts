@@ -1,6 +1,10 @@
+import type { UiLang } from "i18n";
 import { Lang, LangOptionsMap } from "languages";
 
 export interface SmartTypographySettings {
+  // Language of the settings, menus, notices and marker tooltips.
+  uiLanguage: UiLang;
+
   curlyQuotes: boolean;
   emDash: boolean;
   ellipsis: boolean;

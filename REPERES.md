@@ -12,6 +12,8 @@ Le triangle se place contre le signe en cause :
 
 La commande « Corriger la typographie de la sélection » applique les mêmes règles que le repérage.
 
+Les réglages sont cités sous leur nom dans l'interface française, à choisir dans « Langue de l'interface » (l'anglais est la langue par défaut).
+
 ## Quelle langue ?
 
 Chaque ligne est reconnue séparément, ce qui tolère une citation dans une autre langue. Une ligne trop courte prend la langue dominante de la note, puis la langue par défaut des réglages. La propriété `smart-typo` des métadonnées l'emporte sur tout :
