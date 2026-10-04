@@ -105,7 +105,11 @@ export function createSpacingMarkerPlugin(
   getSettings: () => SmartTypographySettings,
   isInScope: (state: EditorState) => boolean
 ) {
-  const build = (view: EditorView): DecorationSet => {
+  // Une espace tapée après un point est le plus souvent suivie d'un mot : le
+  // repère de fin de ligne n'apparaît donc que 5 s après la dernière frappe.
+  const LINE_END_DELAY = 5000;
+
+  const build = (view: EditorView, justEdited: boolean): DecorationSet => {
     const builder = new RangeSetBuilder<Decoration>();
     if (!isInScope(view.state)) return builder.finish();
 
@@ -113,6 +117,9 @@ export function createSpacingMarkerPlugin(
     const note = noteTypoOf(view.state, settings.defaultLanguage);
     if (note.disabled) return builder.finish();
     const fmEnd = frontmatterEnd(view.state);
+    const caretLine = justEdited
+      ? view.state.doc.lineAt(view.state.selection.main.head)
+      : null;
 
     for (const { from, to } of visibleLineRanges(view)) {
       if (to <= fmEnd) continue;
@@ -125,6 +132,14 @@ export function createSpacingMarkerPlugin(
         settings,
         note
       )) {
+        if (
+          reason === "line-end" &&
+          caretLine &&
+          base + pos >= caretLine.from &&
+          base + pos <= caretLine.to
+        ) {
+          continue;
+        }
         builder.add(
           base + pos,
           base + pos + 1,
@@ -143,15 +158,28 @@ export function createSpacingMarkerPlugin(
   return ViewPlugin.fromClass(
     class {
       decorations: DecorationSet;
+      timer: number | null = null;
 
       constructor(view: EditorView) {
-        this.decorations = build(view);
+        this.decorations = build(view, false);
       }
 
       update(update: ViewUpdate) {
-        if (update.docChanged || update.viewportChanged) {
-          this.decorations = build(update.view);
+        if (update.docChanged) {
+          if (this.timer !== null) window.clearTimeout(this.timer);
+          this.timer = window.setTimeout(() => {
+            this.timer = null;
+            this.decorations = build(update.view, false);
+            update.view.dispatch({});
+          }, LINE_END_DELAY);
+          this.decorations = build(update.view, true);
+        } else if (update.viewportChanged) {
+          this.decorations = build(update.view, this.timer !== null);
         }
+      }
+
+      destroy() {
+        if (this.timer !== null) window.clearTimeout(this.timer);
       }
     },
     { decorations: (plugin) => plugin.decorations }
