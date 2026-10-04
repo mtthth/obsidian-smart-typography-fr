@@ -1,12 +1,10 @@
 # Smart Typography FR
 
-[English version](README.en.md) · [Cas signalés par le triangle rouge](REPERES.md)
+[Version française](README.fr.md) · [What the red triangle flags](MARKERS.md)
 
-Par Matthieu Thomas (cidrolin), sur une idée de mgmeyers : ce plugin est un
-fork de son [Smart Typography](https://github.com/mgmeyers/obsidian-smart-typography)
-**1.0.18**, dont il reprend le code. L'historique amont est conservé : le
-fork part du tag `1.0.18`, et le dépôt d'origine est déclaré comme remote
-`upstream`.
+By Matthieu Thomas (cidrolin), from an idea by mgmeyers: this plugin is a fork of his [Smart Typography](https://github.com/mgmeyers/obsidian-smart-typography) **1.0.18**, whose code it reuses. The upstream history is kept: the fork starts from tag `1.0.18`, and the original repository is declared as the `upstream` remote.
+
+The plugin's interface (settings, commands, notices) is in French.
 
 ## Installation
 
@@ -15,235 +13,146 @@ npm install
 .\deploy.ps1
 ```
 
-`deploy.ps1` compile puis copie `main.js`, `manifest.json` et `styles.css` dans
-`G:\Mon Drive\txt\journal\.obsidian\plugins\obsidian-smart-typography\`
-(autre destination : `.\deploy.ps1 -VaultPluginPath <dossier>`). Il ne
-touche jamais à `data.json`, qui contient les réglages. Rechargez ensuite
-Obsidian.
+`deploy.ps1` builds, then copies `main.js`, `manifest.json` and `styles.css` to `G:\Mon Drive\txt\journal\.obsidian\plugins\obsidian-smart-typography\` (other destination: `.\deploy.ps1 -VaultPluginPath <folder>`). It never touches `data.json`, which holds the settings. Then reload Obsidian.
 
-L'`id` du manifest (`smart-typography-fr`) diffère de l'original : le
-vérificateur de mise à jour d'Obsidian ne rattachera jamais cette copie au
-dépôt amont. Le dossier du coffre, lui, garde le nom d'origine : Obsidian y
-a déjà enregistré le plugin et ses réglages, et un second dossier portant
-le même `id` ferait charger deux copies concurrentes. Si vous aviez déjà le
-plugin d'origine, désactivez-le pour éviter que les deux jeux de règles se
-marchent dessus.
+The manifest `id` (`smart-typography-fr`) differs from the original: Obsidian's update checker will never tie this copy to the upstream repository. The vault folder keeps the original name: Obsidian has already stored the plugin and its settings there, and a second folder with the same `id` would load two competing copies. If you already had the original plugin, disable it so that both rule sets do not clash.
 
-## Réglages ajoutés
+## Added settings
 
-**Portée** — un interrupteur « Limiter à certains dossiers » + une liste,
-un chemin par ligne, relatif à la racine du coffre, sous-dossiers compris,
-casse respectée. Liste vide = plugin inactif partout.
+**Scope**: a "Limiter à certains dossiers" switch plus a list, one path per line, relative to the vault root, subfolders included, case-sensitive. Empty list = plugin inactive everywhere.
 
-**Réglages par langue** — un menu choisit la langue (français, anglais,
-allemand, russe, turc, italien, espagnol), puis chaque famille de règles s'y
-coupe ou s'y active : espaces courantes, avant `; ! ?`, deux-points,
-guillemets « », pourcentages, guillemets droits, trait d'union entre espaces,
-règles propres à la langue. « Vérifier le … » coupe toute la langue. Ces
-réglages commandent la correction de la sélection et le repérage rouge ; en
-français, ils règlent aussi la saisie. Voir [REPERES.md](REPERES.md) pour le
-détail de chaque famille. Les anciens interrupteurs français (deux-points,
-guillemets, pourcentages) sont repris tels quels dans la langue française.
+**Per-language settings**: a menu picks the language (French, English, German, Russian, Turkish, Italian, Spanish), then each family of rules can be switched on or off for it: general spacing, before `; ! ?`, colon, guillemets « », percent, straight quotes, hyphen between spaces, language-specific rules. "Vérifier le …" switches the whole language off. These settings drive the selection fix command and the red markers; for French they also drive typing. See [MARKERS.md](MARKERS.md) for the detail of each family. The former French switches (colon, guillemets, percent) are carried over as they were into the French language.
 
-**Typographie française à la saisie** — désactivée par défaut
-(« Espaces avant la ponctuation double », dans les réglages du français). Une
-fois activée :
+**French typing assistance**: off by default ("Espaces avant la ponctuation double", in the French settings). Once on:
 
-| Saisie              | Résultat      | Espace |
+| You type            | Result        | Space  |
 |---------------------|---------------|--------|
-| `mot;` ou `mot ;`   | `mot ;`       | U+202F |
-| `mot!` ou `mot !`   | `mot !`       | U+202F |
-| `mot?` ou `mot ?`   | `mot ?`       | U+202F |
-| `mot:` ou `mot :`   | `mot :`       | U+00A0 |
-| `<<` ou `«`         | `« `          | U+202F |
-| `>>` ou `»`         | ` »`          | U+202F |
-| `50%` ou `50 %`     | `50 %`        | U+00A0 |
+| `mot;` or `mot ;`   | `mot ;`       | U+202F |
+| `mot!` or `mot !`   | `mot !`       | U+202F |
+| `mot?` or `mot ?`   | `mot ?`       | U+202F |
+| `mot:` or `mot :`   | `mot :`       | U+00A0 |
+| `<<` or `«`         | `« `          | U+202F |
+| `>>` or `»`         | ` »`          | U+202F |
+| `50%` or `50 %`     | `50 %`        | U+00A0 |
 
-Le deux-points prend une insécable pleine, pas une fine : règle de
-l'Imprimerie nationale, une fine y serait trop serrée. Un menu permet de
-rabattre la fine sur U+00A0 ou U+2009 si votre police ne rend pas U+202F.
-Deux-points, guillemets et pourcentages ont chacun leur interrupteur, dans
-les réglages du français.
+The colon takes a full non-breaking space, not a narrow one: an Imprimerie nationale rule, a narrow space would be too tight there. A menu lets you fall back from the narrow space to U+00A0 or U+2009 if your font does not render U+202F. Colon, guillemets and percent each have their own switch, in the French settings.
 
-Une seule espace devant un groupe : `Oh !!` donne `Oh !!`, pas `Oh ! !`.
+Only one space in front of a group: `Oh !!` gives `Oh !!`, not `Oh ! !`.
 
-La ponctuation qui suit une balise fermante reçoit aussi son espace, placée
-après la balise : `*mot*?` donne `*mot* ?`, de même après `**`, `` ` ``,
-`~~`, `==` ou `</u>`. `”` et `›` comptent comme fin de mot.
+Punctuation following a closing mark also gets its space, placed after the mark: `*mot*?` gives `*mot* ?`, likewise after `**`, `` ` ``, `~~`, `==` or `</u>`. `”` and `›` count as the end of a word.
 
-## Corriger un texte déjà écrit
+## Fixing text that is already written
 
-La commande **« Corriger la typographie de la sélection »** (palette de
-commandes, et clic droit quand du texte est sélectionné) applique d'un coup
-au texte sélectionné les règles de la langue de chaque ligne (voir
-[Langues](#langues)), avec les mêmes réglages que la saisie : caractère
-d'espace fine, et familles de règles cochées pour chaque langue. Elle n'a pas de raccourci par défaut ; attribuez-le dans Réglages
-→ Raccourcis clavier. Tout s'annule d'un seul `Ctrl + Z`, et la sélection
-reste active après coup.
+The command **"Corriger la typographie de la sélection"** (command palette, and right-click when text is selected) applies in one go to the selected text the rules of each line's language (see [Languages](#languages)), with the same settings as typing: narrow space character, and the families of rules ticked for each language. It has no default shortcut; assign one in Settings → Hotkeys. Everything undoes with a single `Ctrl + Z`, and the selection stays active afterwards.
 
-C'est une commande explicite : elle ne dépend pas de la portée par dossier, ni
-de l'interrupteur « Espaces avant la ponctuation double ».
+It is an explicit command: it does not depend on the folder scope, nor on the "Espaces avant la ponctuation double" switch.
 
-| Exemple | Correction appliquée |
-|---------|----------------------|
-| `Bonjour ; ça va ?` | espace fine insécable avant `;` `!` `?` |
-| `Attention : ici` | espace insécable avant `:` |
-| `50 %` | espace insécable avant `%` (jamais avant `%%`, qui délimite un commentaire) |
-| `« citation »` | espaces fines à l'intérieur des guillemets |
-| `Il a dit "bonjour"` | guillemets droits appariés → `« bonjour »` |
-| `l'été` | apostrophe typographique (si « Curly Quotes » est actif) |
-| `Ah...` | points de suspension `Ah…` (si « Ellipsis » est actif) |
-| `mot , suite` | espace parasite avant la virgule supprimée |
-| `enfin(frf)` | espace ajoutée avant la parenthèse (sauf `chat(s)`, `allié(e)`) |
-| `fin;suite` | espace ajoutée après `;` `!` `?` collé à une lettre |
-| `l ’ obscurité`, `l’ obscurité` | élision resserrée : `l’obscurité` |
-| `Fin. ` en bout de ligne | espaces finales supprimées |
-| ligne faite d'espaces | espaces supprimées |
+| Example | Fix applied |
+|---------|-------------|
+| `Bonjour ; ça va ?` | narrow non-breaking space before `;` `!` `?` |
+| `Attention : ici` | non-breaking space before `:` |
+| `50 %` | non-breaking space before `%` (never before `%%`, which delimits a comment) |
+| `« citation »` | narrow spaces inside the guillemets |
+| `Il a dit "bonjour"` | paired straight quotes → `« bonjour »` |
+| `l'été` | typographic apostrophe (if "Curly Quotes" is on) |
+| `Ah...` | ellipsis `Ah…` (if "Ellipsis" is on) |
+| `mot , suite` | stray space before the comma removed |
+| `enfin(frf)` | space added before the parenthesis (except `chat(s)`, `allié(e)`) |
+| `fin;suite` | space added after a `;` `!` `?` stuck to a letter |
+| `l ’ obscurité`, `l’ obscurité` | elision tightened: `l’obscurité` |
+| `Fin. ` at the end of a line | trailing spaces removed |
+| a line made of spaces | spaces removed |
 
-La commande est idempotente : la relancer sur un texte déjà corrigé ne change
-rien. Elle ne touche jamais aux blocs et portions de code, aux formules, aux
-liens et images intégrées, aux URL, aux balises HTML, aux définitions de
-référence et de note (`[ref]: url`, `[^1]: texte`), aux commentaires
-(`%% ... %%`), ni au bloc de métadonnées quand la sélection commence par lui.
-Les cas ambigus sont laissés tels quels : `12:30`, `clé:: valeur` (Dataview),
-`C:\dossier`, `:)` et les guillemets droits non appariés (`5"`).
+The command is idempotent: running it again on text that is already fixed changes nothing. It never touches code blocks and spans, formulas, links and embeds, URLs, HTML tags, reference and footnote definitions (`[ref]: url`, `[^1]: text`), comments (`%% ... %%`), nor the front matter when the selection starts with it. Ambiguous cases are left as they are: `12:30`, `key:: value` (Dataview), `C:\folder`, `:)` and unpaired straight quotes (`5"`).
 
-Un `!` ou `?` placé juste après une portion protégée (`` `code` ! ``) ne reçoit
-pas son espace, faute de contexte. Et sélectionner l'intérieur d'un bloc de
-métadonnées *sans* son `---` ouvrant fait perdre à la commande le seul indice
-qui le lui signale : les `clé: valeur` reçoivent alors une insécable.
+A `!` or `?` placed right after a protected portion (`` `code` ! ``) does not get its space, for lack of context. And selecting the inside of a front matter block *without* its opening `---` makes the command lose the one clue that tells it so: the `key: value` lines then get a non-breaking space.
 
-Hors du français, les guillemets droits ne sont convertis que si « Curly
-Quotes » est actif ; les traits d'union entre espaces deviennent des tirets.
+Outside French, straight quotes are only converted if "Curly Quotes" is on; hyphens between spaces become dashes.
 
-## Langues
+## Languages
 
-Chaque ligne est vérifiée selon sa langue : français, anglais, allemand,
-russe, turc, italien ou espagnol. La portée par dossier dit où le plugin agit,
-la langue dit quelles règles il applique.
+Each line is checked according to its language: French, English, German, Russian, Turkish, Italian or Spanish. The folder scope says where the plugin acts, the language says which rules it applies.
 
-**Détection** — la langue d'une ligne est reconnue à ses mots-outils (le, the,
-der, ve, che, el…), à ses lettres propres (ß, ñ, ğ, ê…) et, pour le russe, à son
-alphabet. Une ligne trop courte ou trop mêlée prend la langue dominante de la
-note ; une note trop courte, la **langue par défaut** des réglages.
+**Detection**: a line's language is recognised from its function words (le, the, der, ve, che, el…), its own letters (ß, ñ, ğ, ê…) and, for Russian, its alphabet. A line too short or too mixed takes the dominant language of the note; a note too short, the **default language** from the settings.
 
-**Propriété `smart-typo`** — clic droit dans la note → « Langue typographique
-de la note… » (ou la commande du même nom) pose ou retire la propriété ; on
-peut aussi l'écrire à la main :
+**`smart-typo` property**: right-click in the note → "Langue typographique de la note…" (or the command of the same name) sets or removes the property; you can also write it by hand:
 
-| Valeur | Effet |
-|--------|-------|
-| absente | détection automatique |
-| `fr` `en` `de` `ru` `tr` `it` `es` | langue imposée à toute la note |
-| `false` | aucun repère rouge ; saisie et correction restent actives |
+| Value | Effect |
+|-------|--------|
+| absent | automatic detection |
+| `fr` `en` `de` `ru` `tr` `it` `es` | language forced for the whole note |
+| `false` | no red markers; typing and fixing stay active |
 
-**Saisie** — les règles de saisie françaises (insécables devant `;` `!` `?`
-`:` `%` `»`) ne jouent que sur une ligne reconnue comme française.
+**Typing**: the French typing rules (non-breaking spaces before `;` `!` `?` `:` `%` `»`) only apply on a line recognised as French.
 
-## Repérer les fautes de typographie
+## Flagging typography faults
 
-Réglage **« Signaler les fautes de typographie »** (activé par défaut). Dans les
-dossiers concernés, un petit repère rouge en forme de caret, glissé sous la
-ligne contre le signe fautif, marque les fautes ci-dessous. Son info-bulle dit
-laquelle, et la langue retenue pour la ligne.
+Setting **"Signaler les fautes de typographie"** (on by default). In the scoped folders, a small red caret-shaped marker, slipped under the line against the faulty sign, flags the faults below. Its tooltip says which one, and the language retained for the line. The full list, language by language, is in [MARKERS.md](MARKERS.md).
 
-**Toutes langues**
+**All languages**
 
-| Faute | Exemple | Correction |
-|-------|---------|------------|
-| espace après `(`, avant `)` | `( attire )` | `(attire)` |
-| espace avant `.` ou `,` | `attire .` | `attire.` |
-| virgule collée au mot suivant | `mot,suite` | `mot, suite` |
-| guillemet ou apostrophe droit | `"non"`, `l'été` | selon la langue |
-| trait d'union entre espaces | `mot - mot` | `mot – mot` (`—` en russe et espagnol) |
-| espace doublée | `deux  espaces` | `deux espaces` |
-| `(` collée au mot qui précède | `enfin(frf)` | `enfin (frf)` (hors `chat(s)`, `allié(e)`) |
-| `;` `!` `?` collé à la lettre suivante | `fin;suite` | `fin; suite` |
-| élision avec espace | `l’ obscurité`, `l ’obscurité` | `l’obscurité` |
-| une ou plusieurs espaces après une fin de phrase, en bout de ligne | `Fin. ` | `Fin.` (le repère attend 5 s sur la ligne en cours de frappe) |
-| espaces seules sur une ligne vide | `   ` | ligne vide |
+| Fault | Example | Fix |
+|-------|---------|-----|
+| space after `(`, before `)` | `( attire )` | `(attire)` |
+| space before `.` or `,` | `attire .` | `attire.` |
+| comma stuck to the next word | `mot,suite` | `mot, suite` |
+| straight quote or apostrophe | `"non"`, `l'été` | depends on the language |
+| hyphen between spaces | `mot - mot` | `mot – mot` (`—` in Russian and Spanish) |
+| doubled space | `deux  espaces` | `deux espaces` |
+| `(` stuck to the preceding word | `enfin(frf)` | `enfin (frf)` (except `chat(s)`, `allié(e)`) |
+| `;` `!` `?` stuck to the next letter | `fin;suite` | `fin; suite` |
+| elision with a space | `l’ obscurité`, `l ’obscurité` | `l’obscurité` |
+| one or more spaces after the end of a sentence, at the end of a line | `Fin. ` | `Fin.` (the marker waits 5 s on the line being typed) |
+| spaces alone on an empty line | `   ` | empty line |
 
-**Par langue**
+**By language**
 
-| Langue | Règles |
-|--------|--------|
-| français | insécable devant `;` `!` `?` `:` `%` `»` et derrière `«` (fine, ou pleine devant `:` et `%`) ; `"…"` → `« … »` |
-| anglais | aucune espace devant `;` `:` `!` `?` ; `50%` collé ; `"…"` → `“…”` |
-| allemand | aucune espace devant `;` `:` `!` `?` ; `50 %` (insécable) ; `„…“`, jamais `”` ; `z. B.`, `d. h.` espacés |
-| russe | aucune espace devant `;` `:` `!` `?` ni dans `«…»` ; tiret `—` |
-| turc | aucune espace devant `;` `:` `!` `?` ni dans `«…»` ; `%50`, le signe avant le nombre ; `"…"` → `“…”` |
-| italien | aucune espace devant `;` `:` `!` `?` ni dans `«…»` ; `50%` collé ; `È`, jamais `E'` |
-| espagnol | aucune espace devant `;` `:` `!` `?` ni dans `«…»` ; `¿…?` et `¡…!` appariés, sans espace après `¿` `¡` ; `50 %` (insécable) ; tiret `—` |
+| Language | Rules |
+|----------|-------|
+| French | non-breaking space before `;` `!` `?` `:` `%` `»` and after `«` (narrow, or full before `:` and `%`); `"…"` → `« … »` |
+| English | no space before `;` `:` `!` `?`; `50%` stuck; `"…"` → `“…”` |
+| German | no space before `;` `:` `!` `?`; `50 %` (non-breaking); `„…“`, never `”`; `z. B.`, `d. h.` spaced |
+| Russian | no space before `;` `:` `!` `?` nor inside `«…»`; `—` dash |
+| Turkish | no space before `;` `:` `!` `?` nor inside `«…»`; `%50`, the sign before the number; `"…"` → `“…”` |
+| Italian | no space before `;` `:` `!` `?` nor inside `«…»`; `50%` stuck; `È`, never `E'` |
+| Spanish | no space before `;` `:` `!` `?` nor inside `«…»`; paired `¿…?` and `¡…!`, no space after `¿` `¡`; `50 %` (non-breaking); `—` dash |
 
-Les décimales (`3,5`), extensions (`a.md`), points de suspension, émoticônes
-(`:)`), alignements de tableau (`:---`), puces, URL, code et autres zones
-protégées ne sont pas signalés. Les espaces doublées sont permises dans les
-tableaux (lignes qui commencent par `|`, ou bloc sans bordure qui contient une
-ligne `---|---`), dans l'indentation, après une puce, un numéro ou un `>`, et
-en fin de ligne (après une fin de phrase, elles sont en revanche signalées), où deux espaces forcent un retour à la ligne. En français, une
-insécable déjà présente n'est jamais signalée ; une espace ordinaire qui la
-côtoie l'est. Chaque famille de règles se coupe langue par langue dans les
-réglages (voir [Réglages par langue](#réglages-ajoutés)). Le détail de tous les
-cas, langue par langue, est dans [REPERES.md](REPERES.md).
+Decimals (`3,5`), extensions (`a.md`), ellipses, emoticons (`:)`), table alignments (`:---`), bullets, URLs, code and other protected zones are not flagged. Doubled spaces are allowed in tables (lines starting with `|`, or a borderless block that contains a `---|---` line), in indentation, after a bullet, a number or a `>`, and at the end of a line, where two spaces force a line break (after the end of a sentence, though, trailing spaces are flagged). In French, an existing non-breaking space is never flagged; an ordinary space next to it is. Each family of rules can be switched off language by language in the settings (see [Added settings](#added-settings)).
 
-C'est purement visuel, le texte n'est jamais modifié, et la commande de
-correction règle ce qui peut l'être — pas le `¿` manquant, dont elle ne sait
-où placer l'ouverture. Les zones protégées de la commande le sont aussi
-ici ; le bloc de métadonnées est reconnu sur la note entière. Limite connue :
-dans un bloc de code dont l'ouverture ``` est au-dessus de la partie visible,
-des espaces peuvent être signalées à tort. Ce repère est fourni par
-`styles.css`, que `deploy.ps1` copie avec `main.js`.
+It is purely visual, the text is never modified, and the fix command sorts out what can be sorted out, not the missing `¿`, whose opening it cannot place. The command's protected zones are protected here too; the front matter is recognised on the whole note. Known limit: in a code block or a multi-line `%% … %%` comment whose opening (``` or `%%`) is above the visible part, spaces may be flagged wrongly. The marker is provided by `styles.css`, which `deploy.ps1` copies along with `main.js`.
 
-## Garde-fous intégrés
+## Built-in safeguards
 
-- Aucune fine à l'intérieur d'une URL (`http://a.fr/b?c=1` reste intact),
-  détecté sur une fenêtre de 96 caractères en amont.
-- Aucune insécable après un schéma d'URI (`https:`, `mailto:`, `obsidian:`…).
-- `12:30` épargné : les chiffres sont hors de la classe déclenchante.
-- Aucune insécable devant le deux-points d'une définition de note ou de
-  lien en début de ligne (`[^1]:`, `[ref]:`).
-- `![[image]]` en milieu de ligne : la fine posée par le `!` est retirée
-  dès la frappe du `[`, y compris avec l'auto-appariement des crochets.
-- Blocs de code, frontmatter, maths et tags restent exclus, comme en amont.
-- Le retour arrière annule chaque substitution, comme pour les guillemets
-  courbes.
+- No narrow space inside a URL (`http://a.fr/b?c=1` stays intact), detected on a 96-character window upstream.
+- No non-breaking space after a URI scheme (`https:`, `mailto:`, `obsidian:`…).
+- `12:30` spared: digits are outside the triggering class.
+- No non-breaking space before the colon of a footnote or link definition at the start of a line (`[^1]:`, `[ref]:`).
+- `![[image]]` in mid-line: the narrow space set by the `!` is removed as soon as `[` is typed, including with bracket auto-pairing.
+- Code blocks, front matter, maths and tags stay excluded, as upstream.
+- Backspace undoes each substitution, as for curly quotes.
 
-## Limites
+## Limits
 
-- **Les règles de saisie ne s'appliquent pas au texte déjà écrit** : pour cela, la commande de correction de la sélection.
-- Dataview : `champ:: valeur` reçoit une insécable sur le premier `:` et
-  casse le champ. Désactivez l'option deux-points si vous en posez.
-- URL sans schéma (`www.exemple.fr/x?y=1`) : le `?` reçoit une fine.
-- La portée est lue via `editorInfoField` quand Obsidian l'expose, sinon
-  via le fichier actif — un éditeur en survol non focalisé peut alors être
-  jugé sur le chemin de la note de dessous.
-- Une recherche sur `mot ;` avec une espace ordinaire ne trouvera plus rien.
-- La détection peut se tromper sur une ligne courte qui mêle deux langues ;
-  la propriété `smart-typo` tranche alors pour toute la note.
+- **Typing rules do not apply to text already written**: for that, use the selection fix command.
+- Dataview: `field:: value` gets a non-breaking space on the first `:` and breaks the field. Turn the colon option off if you use them.
+- URLs without a scheme (`www.exemple.fr/x?y=1`): the `?` gets a narrow space.
+- Scope is read through `editorInfoField` when Obsidian exposes it, otherwise through the active file: an unfocused hover editor may then be judged on the path of the note beneath it.
+- A search for `mot ;` with an ordinary space will no longer find anything.
+- Detection can be wrong on a short line that mixes two languages; the `smart-typo` property then decides for the whole note.
 
 ## Tests
 
-`npm test` vérifie la correction, le repérage et la détection de langue
-(`fixTypography.ts`, `languages.ts`), sans
-Obsidian ni dépendance de plus.
+`npm test` checks fixing, flagging and language detection (`fixTypography.ts`, `languages.ts`), without Obsidian and without any extra dependency.
 
-## Compiler
+## Building
 
-`npm run build` produit `main.js`, que git ignore. TypeScript est remonté en
-5.4 parce que les `.d.ts` de `@lezer/common` utilisent la syntaxe
-`export { type X }`, que le TS 4.2 épinglé en amont ne comprend pas — il
-compilait quand même, mais sans vérifier grand-chose.
+`npm run build` produces `main.js`, which git ignores. TypeScript was raised to 5.4 because the `.d.ts` files of `@lezer/common` use the `export { type X }` syntax, which the TS 4.2 pinned upstream does not understand; it compiled anyway, but without checking much.
 
-`@codemirror/language` vient du registre npm et non plus du fork git de
-l'amont, que npm 12 refuse d'installer. Le module reste externe au bundle :
-c'est Obsidian qui le fournit. `tokenClassNodeProp` n'existe que dans le
-CodeMirror d'Obsidian : il est lu par un `as any`, d'où un build sans
-avertissement.
+`@codemirror/language` comes from the npm registry and no longer from the upstream git fork, which npm 12 refuses to install. The module remains external to the bundle: Obsidian provides it. `tokenClassNodeProp` only exists in Obsidian's CodeMirror: it is read through an `as any`, hence a build without warnings.
 
-## Comparer à l'amont
+## Comparing with upstream
 
-Le tag `1.0.18` vient du dépôt amont. Sur un nouveau clone, récupérez-le
-d'abord, puis comparez :
+Tag `1.0.18` comes from the upstream repository. On a fresh clone, fetch it first, then compare:
 
 ```bash
 git remote add upstream https://github.com/mgmeyers/obsidian-smart-typography
@@ -253,13 +162,8 @@ git diff 1.0.18 HEAD
 
 ## Licence
 
-GPL-3.0 (voir [LICENSE.md](LICENSE.md)), comme le plugin d'origine dont ce
-fork reprend le code.
+GPL-3.0 (see [LICENSE.md](LICENSE.md)), like the original plugin whose code this fork reuses.
 
-- Smart Typography : © 2021-2022 mgmeyers.
-- Modifications : © 2026 Matthieu Thomas (cidrolin). Portée par dossier et
-  typographie française, ajoutées à partir du 24 août 2026 dans `main.ts`,
-  `types.ts`, `inputRules.ts` et `manifest.json`.
-- `frenchRules.ts`, écrit pour ce fork, est en outre disponible sous
-  licence MIT (texte en tête du fichier) : vous pouvez le réutiliser
-  ailleurs sous l'une ou l'autre licence.
+- Smart Typography: © 2021-2022 mgmeyers.
+- Modifications: © 2026 Matthieu Thomas (cidrolin). Folder scope and French typography, added from 24 August 2026 in `main.ts`, `types.ts`, `inputRules.ts` and `manifest.json`.
+- `frenchRules.ts`, written for this fork, is also available under the MIT licence (text at the top of the file): you may reuse it elsewhere under either licence.
