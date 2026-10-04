@@ -205,6 +205,36 @@ function doubleSpaces(text: string, spans: [number, number][]): [number, number]
   return found;
 }
 
+// Espaces de bord de ligne : une suite d'espaces seule sur sa ligne, et une
+// espace unique après une fin de phrase en bout de ligne (à deux espaces ou
+// plus, c'est un saut de ligne Markdown, laissé). Dans les deux cas, rien à
+// garder : la correction les supprime.
+const EDGE_SPACE_SOURCE =
+  "^[ \\t]{2,}(?=\\r?$)|(?<=[.!?…»”])[ \\t](?=\\r?$)";
+
+type EdgeKind = "blank-line" | "line-end";
+
+function edgeSpaces(
+  text: string,
+  spans: [number, number][]
+): { start: number; end: number; kind: EdgeKind }[] {
+  const starts = lineStarts(text);
+  const found: { start: number; end: number; kind: EdgeKind }[] = [];
+  const re = new RegExp(EDGE_SPACE_SOURCE, "gm");
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    const start = match.index;
+    const end = start + match[0].length;
+    if (spans.some(([a, b]) => start < b && end > a)) continue;
+    const lineStart = starts[lineIndex(starts, start)];
+    const blank = start === lineStart;
+    // « 1. » ou « - » seuls : une puce vide, pas une fin de phrase.
+    if (!blank && LINE_PREFIX_RE.test(text.slice(lineStart, start))) continue;
+    found.push({ start, end, kind: blank ? "blank-line" : "line-end" });
+  }
+  return found;
+}
+
 /* ------------------------------------------------------------------ */
 /* Correction                                                          */
 /* ------------------------------------------------------------------ */
@@ -222,7 +252,10 @@ const END_OF_SENTENCE = "(?![^\\s)\\]»”’“*_~\"'])";
 const STOP_END = "(?=[\\s)\\]»”’“*_~\"']|$)";
 const COLON_END = "(?=[\\s\\]»”’“*_~\"']|$)";
 
-const NBSP_CHAR = "\u00A0";
+// Marque facultative collée au mot, qui n'appelle pas d'espace : chat(s), allié(e).
+const PLURAL_MARK = "(?:e|s|es|x|ée|ées|ne|nes)";
+
+const NBSP_CHAR ="\u00A0";
 
 // Guillemets des langues autres que le français, pour convertir "…".
 const QUOTES: Record<Exclude<Lang, "fr">, [string, string]> = {
@@ -272,6 +305,8 @@ function rulesFor(s: SmartTypographySettings, lang: Lang): TypoRule[] {
   if (lang === "de") rule("“([^”\\n]*)”", "„$1“");
   if (lang === "it") rule(`(?<!${LETTER})E['’](?=${H})`, "È");
   if (s.curlyQuotes) rule("'", s.closeSingle);
+  // Apostrophe d'élision isolée entre deux espaces : « l ’ obscurité ».
+  rule(`(${LETTER})${H}+(['’])${H}+(?=${LETTER})`, "$1$2");
   if (s.ellipsis) rule("\\.\\.\\.", "…");
 
   // Couche universelle.
@@ -280,6 +315,8 @@ function rulesFor(s: SmartTypographySettings, lang: Lang): TypoRule[] {
   rule(`(\\S)${H}+\\)`, "$1)");
   rule(`(\\S)${H}+([.,])${END_OF_SENTENCE}`, "$1$2");
   rule(`(${LETTER},)(?=${LETTER})`, "$1 ");
+  rule(`([;!?]+)(?=${LETTER})`, "$1 ");
+  rule(`(${LETTER})\\((?!${PLURAL_MARK}\\))`, "$1 (");
   rule(`([^\\s|-]${H}+)-(?=${H}+[^\\s|-])`, `$1${DASHES[lang]}`);
 
   if (lang === "fr") {
@@ -327,10 +364,15 @@ export function applyTypography(
   s: SmartTypographySettings,
   ctx: LangContext
 ): string {
+  const outer = protectedRanges(text);
+  const edits = [
+    ...doubleSpaces(text, outer).map(([start, end]) => ({ start, end, repl: " " })),
+    ...edgeSpaces(text, outer).map(({ start, end }) => ({ start, end, repl: "" })),
+  ].sort((a, b) => a.start - b.start);
   let collapsed = "";
   let previous = 0;
-  for (const [start, end] of doubleSpaces(text, protectedRanges(text))) {
-    collapsed += text.slice(previous, start) + " ";
+  for (const { start, end, repl } of edits) {
+    collapsed += text.slice(previous, start) + repl;
     previous = end;
   }
   text = collapsed + text.slice(previous);
@@ -385,6 +427,8 @@ export type SignReason =
   | "quote" // guillemet ou apostrophe droits
   | "dash" // trait d'union entre espaces
   | "double-space" // espace doublée
+  | "blank-line" // espaces seules sur une ligne vide
+  | "line-end" // espace en fin de phrase, en bout de ligne
   | "no-space" // espace interdite dans cette langue
   | "percent-none" // 50% sans espace
   | "percent-tr" // %50 en turc
@@ -438,6 +482,10 @@ const CHECKS: Check[] = [
   { mode: "space", side: "before", reason: "space", pattern: `(?<=\\S)${H}+(?=\\))` },
   { mode: "space", side: "before", reason: "space", pattern: `(?<=\\S)${H}+(?=[.,]${END_OF_SENTENCE})` },
   { mode: "missing", side: "after", reason: "space", pattern: `(?<=${LETTER},)(?=${LETTER})` },
+  { mode: "missing", side: "after", reason: "space", pattern: `(?<=[;!?])(?=${LETTER})` },
+  { mode: "missing", side: "before", reason: "space", pattern: `(?<=${LETTER})(?=\\((?!${PLURAL_MARK}\\)))` },
+  { mode: "space", side: "before", reason: "space", pattern: `(?<=${LETTER})${H}+(?=['’]${H}+${LETTER})` },
+  { mode: "space", side: "after", reason: "space", pattern: `(?<=${LETTER}${H}+['’])${H}+(?=${LETTER})` },
   { mode: "sign", side: "on", reason: "dash", pattern: `(?<=[^\\s|-]${H}+)-(?=${H}+[^\\s|-])` },
   { mode: "sign", side: "on", reason: "quote", pattern: `["']` },
 
@@ -466,7 +514,9 @@ export function findFaultySigns(
   const spans = protectedRanges(text);
   const langAt = languageResolver(text, spans, ctx);
   const inSpan = (pos: number) => spans.some(([a, b]) => pos >= a && pos < b);
-  const signs = new Map<number, FaultySign>();
+  // Une clé par position et par côté : une apostrophe entre deux espaces porte
+  // un repère de chaque côté.
+  const signs = new Map<string, FaultySign>();
 
   for (const check of CHECKS) {
     const re = new RegExp(check.pattern, check.flags ?? "g");
@@ -496,14 +546,18 @@ export function findFaultySigns(
       const lang = langAt(pos);
       if (check.langs && !check.langs.includes(lang)) continue;
       if (check.when && !check.when(s, lang)) continue;
-      signs.set(pos, { pos, side: check.side, reason: check.reason, lang });
+      signs.set(`${pos}:${check.side}`, { pos, side: check.side, reason: check.reason, lang });
     }
   }
 
   // Espaces doublées : le repère se pose sur la première espace en trop.
   for (const [start] of doubleSpaces(text, spans)) {
     const pos = start + 1;
-    signs.set(pos, { pos, side: "on", reason: "double-space", lang: langAt(pos) });
+    signs.set(`${pos}:on`, { pos, side: "on", reason: "double-space", lang: langAt(pos) });
+  }
+
+  for (const { start, kind } of edgeSpaces(text, spans)) {
+    signs.set(`${start}:on`, { pos: start, side: "on", reason: kind, lang: langAt(start) });
   }
 
   // Espagnol : « ? » et « ! » exigent leur ouvrant ¿ ¡ plus tôt sur la ligne,
@@ -519,7 +573,7 @@ export function findFaultySigns(
     const before = text.slice(text.lastIndexOf("\n", pos - 1) + 1, pos);
     const opener = sign === "?" ? "¿" : "¡";
     if (before.lastIndexOf(opener) <= before.lastIndexOf(sign)) {
-      signs.set(pos, { pos, side: "on", reason: "es-inverted", lang: "es" });
+      signs.set(`${pos}:on`, { pos, side: "on", reason: "es-inverted", lang: "es" });
     }
   }
 

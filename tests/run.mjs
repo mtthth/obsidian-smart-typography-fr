@@ -52,7 +52,7 @@ const unchanged = (input, name, s = settings()) => check(name, applyTypography(i
 
 section("Correction");
 typo("Bonjour ; ça va ?", `Bonjour${FINE}; ça va${FINE}?`, "fine insécable avant ; et ?");
-typo("Sans espace;ici", `Sans espace${FINE};ici`, "fine insérée même sans espace préalable");
+typo("Sans espace;ici", `Sans espace${FINE}; ici`, "fine insérée même sans espace préalable, espace après");
 typo("Quoi ?!", `Quoi${FINE}?!`, "une suite ?! ne reçoit qu'une fine");
 typo("Attention : ici", `Attention${NBSP}: ici`, "insécable avant le deux-points");
 typo("**Note :**", `**Note${NBSP}:**`, "deux-points suivi d'un marqueur d'emphase");
@@ -185,6 +185,19 @@ universal("voir `a  b`  et", "voir `a  b`  et", "code et espace collée au code 
 uni("Deux  espaces", [[5, "on", "double-space"]], "repère sur l'espace en trop");
 uni("| a  | b |\n|---|---|", [], "tableau sans repère");
 uni("mot  ;", [[5, "before", "nbsp"]], "devant la ponctuation, seule sa règle signale");
+
+section("Cas de bord : parenthèse, apostrophe isolée, espaces de bord");
+typo("enfin(frf) certaine ;l ’ obscurité. \n", `enfin (frf) certaine${FINE}; l’obscurité.\n`, "exemple complet corrigé");
+unchanged("chat(s) et allié(es)", "marque du pluriel ou du féminin épargnée");
+typo("a\n   \nb", "a\n\nb", "espaces seules sur une ligne vide");
+unchanged("a\n \nb", "une seule espace sur une ligne vide : laissée");
+unchanged("fin  \nsuite", "saut de ligne Markdown laissé");
+unchanged("1. \n- \nx", "puces vides épargnées");
+unchanged("```\n   \n```", "ligne d'espaces dans un bloc de code");
+check("repérage de l'exemple complet",
+	findFaultySigns("enfin(frf) certaine ;l ’ obscurité. \n", settings(), FR).map(({ pos, side, reason }) => [pos, side, reason]),
+	[[5, "before", "space"], [20, "before", "nbsp"], [20, "after", "space"], [23, "before", "space"], [23, "after", "space"], [35, "on", "line-end"]]);
+check("repérage d'une ligne d'espaces", findFaultySigns("a\n   \nb", settings(), FR).map(({ pos, reason }) => [pos, reason]), [[2, "blank-line"]]);
 
 section("Règles par langue : correction");
 const typoIn = (code, input, expected, name) => check(`${code} : ${name}`, applyTypography(input, settings(), lang(code)), expected);

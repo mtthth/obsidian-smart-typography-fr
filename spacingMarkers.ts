@@ -38,6 +38,8 @@ const MARKER_TITLES: Record<SignReason, string> = {
   quote: "Guillemet ou apostrophe droit : préférer la forme typographique.",
   dash: "Trait d'union entre espaces : un tiret est attendu (– ou —).",
   "double-space": "Espace doublée.",
+  "blank-line": "Espaces seules sur une ligne vide.",
+  "line-end": "Espace inutile en fin de ligne.",
   "no-space": "Pas d'espace ici dans cette langue.",
   "percent-none": "Pas d'espace entre le nombre et %.",
   "percent-tr": "Le signe % précède le nombre : %50.",
