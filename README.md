@@ -160,7 +160,7 @@ laquelle, et la langue retenue pour la ligne.
 | `(` collée au mot qui précède | `enfin(frf)` | `enfin (frf)` (hors `chat(s)`, `allié(e)`) |
 | `;` `!` `?` collé à la lettre suivante | `fin;suite` | `fin; suite` |
 | élision avec espace | `l’ obscurité`, `l ’obscurité` | `l’obscurité` |
-| espace seule en fin de phrase, en bout de ligne | `Fin. ` | `Fin.` (le repère attend 5 s sur la ligne en cours de frappe) |
+| une ou plusieurs espaces après une fin de phrase, en bout de ligne | `Fin. ` | `Fin.` (le repère attend 5 s sur la ligne en cours de frappe) |
 | espaces seules sur une ligne vide | `   ` | ligne vide |
 
 **Par langue**

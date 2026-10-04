@@ -14,35 +14,38 @@ import { SmartTypographySettings } from "types";
 
 // Portions que la correction ne doit jamais toucher : code, maths, liens, URL.
 // Le premier motif ne s'applique qu'en début de texte (pas de drapeau `m`) :
-// c'est le bloc de métadonnées, qu'une insécable avant « : » casserait.
-const PROTECTED_RE = new RegExp(
-  [
-    "^---\\r?\\n[\\s\\S]*?\\r?\\n---",
-    "```[\\s\\S]*?```",
-    "`[^`\\n]*`",
-    "\\$\\$[\\s\\S]*?\\$\\$",
-    "\\$[^\\s$][^$\\n]*\\$",
-    "!?\\[\\[[^\\]\\n]*\\]\\]",
-    "!?\\[[^\\]\\n]*\\]\\([^)\\n]*\\)",
-    // Définition de référence « [ref]: url » ou de note « [^1]: texte » en
-    // début de ligne : seul le libellé et son deux-points sont couverts.
-    "(?<=^|\\n)[ \\t]{0,3}\\[\\^?[^\\]\\n]*\\]:",
-    // Marqueur de callout : [!NOTE], [!WARNING]-…
-    "\\[!\\w+\\][+-]?",
-    // Entité HTML : &nbsp; &amp; &#39; &#x27;…
-    "&(?:[a-zA-Z]+|#\\d+|#x[0-9a-fA-F]+);",
-    // Commentaire Obsidian : %% … %%, sur une ou plusieurs lignes.
-    "%%[\\s\\S]*?%%",
-    "<[^>\\n]+>",
-    "[a-z][a-z0-9+.-]*:\\/\\/\\S+",
-    "www\\.\\S+",
-  ].join("|"),
-  "g"
-);
+// c'est le bloc de métadonnées, qu'une insécable avant « : » casserait. Il
+// n'est retenu que si le texte commence aussi le document : ailleurs, « --- »
+// est un séparateur, pas l'ouverture des métadonnées.
+const FRONTMATTER_SOURCE = "^---\\r?\\n[\\s\\S]*?\\r?\\n---";
+const PROTECTED_SOURCES = [
+  "```[\\s\\S]*?```",
+  "`[^`\\n]*`",
+  "\\$\\$[\\s\\S]*?\\$\\$",
+  "\\$[^\\s$][^$\\n]*\\$",
+  "!?\\[\\[[^\\]\\n]*\\]\\]",
+  "!?\\[[^\\]\\n]*\\]\\([^)\\n]*\\)",
+  // Définition de référence « [ref]: url » ou de note « [^1]: texte » en
+  // début de ligne : seul le libellé et son deux-points sont couverts.
+  "(?<=^|\\n)[ \\t]{0,3}\\[\\^?[^\\]\\n]*\\]:",
+  // Marqueur de callout : [!NOTE], [!WARNING]-…
+  "\\[!\\w+\\][+-]?",
+  // Entité HTML : &nbsp; &amp; &#39; &#x27;…
+  "&(?:[a-zA-Z]+|#\\d+|#x[0-9a-fA-F]+);",
+  // Commentaire Obsidian : %% … %%, sur une ou plusieurs lignes.
+  "%%[\\s\\S]*?%%",
+  "<[^>\\n]+>",
+  "[a-z][a-z0-9+.-]*:\\/\\/\\S+",
+  "www\\.\\S+",
+];
+const PROTECTED_SOURCE = [FRONTMATTER_SOURCE, ...PROTECTED_SOURCES].join("|");
+const PROTECTED_SOURCE_NO_FRONTMATTER = PROTECTED_SOURCES.join("|");
 
-export function protectedRanges(text: string): [number, number][] {
+// `atDocStart` : le texte commence le document, et peut donc s'ouvrir sur le
+// bloc de métadonnées.
+export function protectedRanges(text: string, atDocStart = true): [number, number][] {
   const ranges: [number, number][] = [];
-  const re = new RegExp(PROTECTED_RE.source, "g");
+  const re = new RegExp(atDocStart ? PROTECTED_SOURCE : PROTECTED_SOURCE_NO_FRONTMATTER, "g");
   let match: RegExpExecArray | null;
   while ((match = re.exec(text)) !== null) {
     ranges.push([match.index, match.index + match[0].length]);
@@ -378,12 +381,14 @@ function rulesFor(s: SmartTypographySettings, lang: Lang): TypoRule[] {
 }
 
 // Corrige le texte, hors des zones protégées, selon la langue de chaque ligne.
+// `atDocStart` : le texte commence le document (voir protectedRanges).
 export function applyTypography(
   text: string,
   s: SmartTypographySettings,
-  ctx: LangContext
+  ctx: LangContext,
+  atDocStart = true
 ): string {
-  const outer = protectedRanges(text);
+  const outer = protectedRanges(text, atDocStart);
   const langAt0 = languageResolver(text, outer, ctx);
   const general = (pos: number) => {
     const o = s.langOptions[langAt0(pos)];
@@ -403,7 +408,7 @@ export function applyTypography(
   }
   text = collapsed + text.slice(previous);
 
-  const spans = protectedRanges(text);
+  const spans = protectedRanges(text, atDocStart);
   const langAt = languageResolver(text, spans, ctx);
   const rulesByLang = new Map<Lang, TypoRule[]>();
   const fix = (chunk: string, lang: Lang) => {
@@ -535,13 +540,15 @@ const CHECKS: Check[] = [
 // Signes fautifs, triés, chacun avec le côté où porte la faute, sa nature et
 // la langue de sa ligne. Le repère se pose sur le signe : jamais de la syntaxe
 // que l'aperçu en direct masque, contrairement au caractère qui le précède
-// parfois (**Note**:).
+// parfois (**Note**:). `atDocStart` : le texte commence le document (voir
+// protectedRanges).
 export function findFaultySigns(
   text: string,
   s: SmartTypographySettings,
-  ctx: LangContext
+  ctx: LangContext,
+  atDocStart = true
 ): FaultySign[] {
-  const spans = protectedRanges(text);
+  const spans = protectedRanges(text, atDocStart);
   const langAt = languageResolver(text, spans, ctx);
   const inSpan = (pos: number) => spans.some(([a, b]) => pos >= a && pos < b);
   // Une clé par position et par côté : une apostrophe entre deux espaces porte

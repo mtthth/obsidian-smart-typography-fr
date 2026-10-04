@@ -622,8 +622,12 @@ export default class SmartTypography extends Plugin {
     }
 
     const selection = editor.getSelection();
+    const from = editor.getCursor("from");
     const note = noteTypo(editor.getValue(), this.settings.defaultLanguage);
-    const corrected = applyTypography(selection, this.settings, note);
+    // Les métadonnées ne peuvent ouvrir la sélection que si elle part du tout
+    // début de la note : ailleurs, « --- » est un séparateur.
+    const atDocStart = from.line === 0 && from.ch === 0;
+    const corrected = applyTypography(selection, this.settings, note, atDocStart);
     if (corrected === selection) {
       new Notice("Rien à corriger dans cette sélection.");
       return;
@@ -632,7 +636,6 @@ export default class SmartTypography extends Plugin {
     // Un seul replaceSelection : la correction s'annule d'un seul Ctrl+Z. La
     // sélection est rétablie ensuite, la plupart des corrections étant des
     // espaces invisibles.
-    const from = editor.getCursor("from");
     editor.replaceSelection(corrected);
     editor.setSelection(from, editor.getCursor());
     new Notice("Typographie corrigée.");

@@ -127,10 +127,13 @@ export function createSpacingMarkerPlugin(
       // entières, ce dont dépendent les motifs ancrés sur ^ et $.
       const base = Math.max(from, fmEnd);
       const text = view.state.doc.sliceString(base, to);
+      // Les métadonnées sont déjà écartées par fmEnd : un « --- » en tête de
+      // tranche est un séparateur, qui ne doit rien protéger.
       for (const { pos, side, reason, lang } of findFaultySigns(
         text,
         settings,
-        note
+        note,
+        false
       )) {
         if (
           reason === "line-end" &&

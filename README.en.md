@@ -102,7 +102,7 @@ Setting **"Signaler les fautes de typographie"** (on by default). In the scoped 
 | `(` stuck to the preceding word | `enfin(frf)` | `enfin (frf)` (except `chat(s)`, `allié(e)`) |
 | `;` `!` `?` stuck to the next letter | `fin;suite` | `fin; suite` |
 | elision with a space | `l’ obscurité`, `l ’obscurité` | `l’obscurité` |
-| single space ending a sentence at the end of a line | `Fin. ` | `Fin.` (the marker waits 5 s on the line being typed) |
+| one or more spaces after the end of a sentence, at the end of a line | `Fin. ` | `Fin.` (the marker waits 5 s on the line being typed) |
 | spaces alone on an empty line | `   ` | empty line |
 
 **By language**

@@ -92,6 +92,10 @@ unchanged("voir ![[img.png]]", "pas de fine avant une intégration");
 unchanged("[[Note#Section]]", "lien interne");
 unchanged("$f(x) : y$", "formule en ligne");
 unchanged("---\ntitre: Ma note\ntags: a\n---\n", "métadonnées en tête de sélection");
+check("« --- » hors du début de la note : un séparateur, pas des métadonnées",
+	applyTypography("---\nQuoi ?\n---\nEt ?", settings(), FR, false), `---\nQuoi${FINE}?\n---\nEt${FINE}?`);
+check("repérage d'une tranche qui s'ouvre sur un séparateur « --- »",
+	findFaultySigns("---\nQuoi ?\n---\nEt ?", settings(), FR, false).map(({ pos, reason }) => [pos, reason]), [[9, "nbsp"], [18, "nbsp"]]);
 unchanged('Il mesure 5" de haut', "guillemet droit non apparié");
 unchanged("mot\n? question", "aucune fusion de lignes");
 unchanged('<span title="a ; b">x</span>', "balise HTML");
