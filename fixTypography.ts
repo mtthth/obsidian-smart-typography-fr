@@ -263,6 +263,12 @@ const ELISION =
 // Marque facultative collée au mot, qui n'appelle pas d'espace : chat(s), allié(e).
 const PLURAL_MARK = "(?:e|s|es|x|ée|ées|ne|nes)";
 
+// Point coll\u00E9 entre deux phrases : \u00AB voir.C\u2019est \u00BB. Mot en minuscules, puis une
+// majuscule suivie d'une minuscule ou d'une apostrophe : \u00E9carte \u00AB file.md \u00BB,
+// \u00AB ASP.NET \u00BB, \u00AB U.S.A \u00BB et \u00AB Node.JS \u00BB.
+const GLUED_SENTENCE =
+  "(?<=[a-z\u00E0-\u00F6\u00F8-\u00FF]{2}\\.)(?=[A-Z\u00C0-\u00D6\u00D8-\u00DE][a-z\u00E0-\u00F6\u00F8-\u00FF'\u2019])";
+
 const NBSP_CHAR ="\u00A0";
 
 // Guillemets des langues autres que le français, pour convertir "…".
@@ -331,6 +337,7 @@ function rulesFor(s: SmartTypographySettings, lang: Lang): TypoRule[] {
     rule(`(\\S)${H}+\\)`, "$1)");
     rule(`(\\S)${H}+([.,])${END_OF_SENTENCE}`, "$1$2");
     rule(`(${LETTER},)(?=${LETTER})`, "$1 ");
+    rule(GLUED_SENTENCE, " ");
     rule(`([;!?]+)(?=${LETTER})`, "$1 ");
     rule(`(${LETTER})\\((?!${PLURAL_MARK}\\))`, "$1 (");
   }
@@ -514,6 +521,7 @@ const CHECKS: Check[] = [
   { mode: "space", opt: "general", side: "before", reason: "space", pattern: `(?<=\\S)${H}+(?=\\))` },
   { mode: "space", opt: "general", side: "before", reason: "space", pattern: `(?<=\\S)${H}+(?=[.,]${END_OF_SENTENCE})` },
   { mode: "missing", opt: "general", side: "after", reason: "space", pattern: `(?<=${LETTER},)(?=${LETTER})` },
+  { mode: "missing", opt: "general", side: "after", reason: "space", pattern: GLUED_SENTENCE },
   { mode: "missing", opt: "general", side: "after", reason: "space", pattern: `(?<=[;!?])(?=${LETTER})` },
   { mode: "missing", opt: "general", side: "before", reason: "space", pattern: `(?<=${LETTER})(?=\\((?!${PLURAL_MARK}\\)))` },
   { mode: "space", opt: "general", side: "before", reason: "space", pattern: `(?<=${ELISION})${H}+(?=['’]${LETTER})` },

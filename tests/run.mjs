@@ -176,6 +176,9 @@ const uni = (text, expected, name, ctx = FR, s = settings()) =>
 uni("bla bla ( attire .", [[8, "after", "space"], [17, "before", "space"]], "repères sur ( et .");
 uni("un mot ) fin", [[7, "before", "space"]], "repère sur )");
 uni("mot,suite", [[3, "after", "space"]], "repère sur la virgule collée");
+uni("voir.C’est", [[4, "after", "space"]], "repère sur le point collé");
+universal("voir.C’est", "voir. C’est", "espace après un point collé");
+universal("a.md et Node.JS et ASP.NET", "a.md et Node.JS et ASP.NET", "extensions et sigles épargnés");
 uni("(bien) fait, ok.", [], "texte correct : rien");
 uni("Il a dit \"non\" et l'a fait", [[9, "on", "quote"], [13, "on", "quote"], [19, "on", "quote"]], "guillemets et apostrophes droits");
 uni("voir `a ( b` et https://x.fr/?q='1'", [], "code et URL protégés");
