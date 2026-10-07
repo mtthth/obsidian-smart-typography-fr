@@ -64,6 +64,7 @@ Details:
 - Doubled spaces are not flagged in a table, after a bullet, a number, a checkbox or a `>` quote marker (alignment is intentional), nor before punctuation: that punctuation's own rule applies then. Two trailing spaces (a Markdown line break) are left alone, except after the end of a sentence.
 - An empty bullet (`1. `, `- `) does not end a sentence.
 - The end-of-sentence marker only shows on the line being typed 5 seconds after the last keystroke, so that it does not flicker at each full stop followed by a space.
+- Likewise, a fault right against the caret, with only spaces in between (`tu |.`, `va, |`), waits 5 seconds after the last keystroke, since the next one often fixes it. It shows at once when the caret moves away.
 
 ## French
 

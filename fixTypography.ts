@@ -633,3 +633,12 @@ export function findFaultySigns(
 
   return [...signs.values()].sort((a, b) => a.pos - b.pos);
 }
+
+/**
+ * Is the sign at `pos` against the caret, with nothing but spaces or tabs in between
+ * (`tu |.`, `va, |`)? Such a fault is often gone with the next keystroke.
+ */
+export function touchesCaret(text: string, pos: number, caret: number): boolean {
+  const between = caret <= pos ? text.slice(caret, pos) : text.slice(pos + 1, caret);
+  return /^[^\S\r\n]*$/.test(between);
+}

@@ -18,6 +18,7 @@ import {
   SignSide,
   findFaultySigns,
   noteTypo,
+  touchesCaret,
 } from "fixTypography";
 import { uiStrings } from "i18n";
 import { Lang } from "languages";
@@ -87,6 +88,8 @@ export function createSpacingMarkerPlugin(
 ) {
   // Une espace tapée après un point est le plus souvent suivie d'un mot : le
   // repère de fin de ligne n'apparaît donc que 5 s après la dernière frappe.
+  // Likewise for any fault against the caret (`tu |.`, `va, |`): the next
+  // keystroke often fixes it.
   const LINE_END_DELAY = 5000;
 
   const build = (view: EditorView, justEdited: boolean): DecorationSet => {
@@ -98,9 +101,8 @@ export function createSpacingMarkerPlugin(
     const note = noteTypoOf(view.state, settings.defaultLanguage);
     if (note.disabled) return builder.finish();
     const fmEnd = frontmatterEnd(view.state);
-    const caretLine = justEdited
-      ? view.state.doc.lineAt(view.state.selection.main.head)
-      : null;
+    const caret = view.state.selection.main.head;
+    const caretLine = justEdited ? view.state.doc.lineAt(caret) : null;
 
     for (const { from, to } of visibleLineRanges(view)) {
       if (to <= fmEnd) continue;
@@ -121,6 +123,14 @@ export function createSpacingMarkerPlugin(
           caretLine &&
           base + pos >= caretLine.from &&
           base + pos <= caretLine.to
+        ) {
+          continue;
+        }
+        if (
+          caretLine &&
+          base + pos >= caretLine.from &&
+          base + pos <= caretLine.to &&
+          touchesCaret(text, pos, caret - base)
         ) {
           continue;
         }
@@ -160,7 +170,8 @@ export function createSpacingMarkerPlugin(
             update.view.dispatch({});
           }, LINE_END_DELAY);
           this.decorations = build(update.view, true);
-        } else if (update.viewportChanged) {
+        } else if (update.viewportChanged || (update.selectionSet && this.timer !== null)) {
+          // A caret moved away no longer holds back the faults it touched.
           this.decorations = build(update.view, this.timer !== null);
         }
       }

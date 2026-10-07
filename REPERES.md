@@ -66,6 +66,7 @@ Précisions :
 - L'espace doublée n'est pas signalée dans un tableau, après une puce, un numéro, une case à cocher ou un `>` de citation (l'alignement est voulu), ni devant une ponctuation : c'est alors la règle de cette ponctuation qui s'applique. Les deux espaces en fin de ligne (saut de ligne Markdown) sont laissées, sauf après une fin de phrase.
 - Une puce vide (`1. `, `- `) n'est pas une fin de phrase.
 - Le repère de fin de phrase n'apparaît sur la ligne en cours de frappe que 5 secondes après la dernière frappe, pour ne pas clignoter à chaque point suivi d'une espace.
+- De même, une faute collée au curseur, à des espaces près (`tu |.`, `va, |`), attend 5 secondes après la dernière frappe, car la suivante la corrige souvent. Elle apparaît aussitôt que le curseur s'éloigne.
 
 ## Français
 

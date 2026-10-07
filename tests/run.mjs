@@ -18,7 +18,7 @@ for (const name of ["fixTypography", "frenchRules", "languages"]) {
 	writeFileSync(path.join(out, `${name}.mjs`), js);
 }
 
-const { applyTypography, findFaultySigns, noteTypo } = await import(pathToFileURL(path.join(out, "fixTypography.mjs")).href);
+const { applyTypography, findFaultySigns, noteTypo, touchesCaret } = await import(pathToFileURL(path.join(out, "fixTypography.mjs")).href);
 const { detectLanguage, defaultLangOptions } = await import(pathToFileURL(path.join(out, "languages.mjs")).href);
 const { FINE, NBSP, THIN } = await import(pathToFileURL(path.join(out, "frenchRules.mjs")).href);
 
@@ -214,6 +214,15 @@ check("repérage de l'exemple complet",
 	findFaultySigns("enfin(frf) certaine ;l ’ obscurité. \n", settings(), FR).map(({ pos, side, reason }) => [pos, side, reason]),
 	[[5, "before", "space"], [20, "before", "nbsp"], [20, "after", "space"], [23, "before", "space"], [23, "after", "space"], [35, "on", "line-end"]]);
 check("repérage d'une ligne d'espaces", findFaultySigns("a\n   \nb", settings(), FR).map(({ pos, reason }) => [pos, reason]), [[2, "blank-line"]]);
+
+section("Faults against the caret, held back while typing");
+const againstCaret = (text, caret) => findFaultySigns(text, settings(), FR, false).map(({ pos }) => touchesCaret(text, pos, caret));
+check("space typed before an existing full stop", againstCaret("et tu .", 6), [true]);
+check("comma and space typed before an existing full stop", againstCaret("et tu va, .", 10), [true]);
+check("same fault further from the caret", againstCaret("et tu . Puis", 12), [false]);
+check("sign before the caret, spaces between", [touchesCaret("va, ", 2, 4), touchesCaret("va,", 2, 3)], [true, true]);
+check("a word between sign and caret", [touchesCaret("va, et", 2, 6), touchesCaret("tu .", 3, 0)], [false, false]);
+check("not across a line break", touchesCaret("va,\n", 2, 4), false);
 
 section("Règles par langue : correction");
 const typoIn = (code, input, expected, name) => check(`${code} : ${name}`, applyTypography(input, settings(), lang(code)), expected);
