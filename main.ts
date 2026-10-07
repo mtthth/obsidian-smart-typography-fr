@@ -649,7 +649,9 @@ export default class SmartTypography extends Plugin {
     // Les métadonnées ne peuvent ouvrir la sélection que si elle part du tout
     // début de la note : ailleurs, « --- » est un séparateur.
     const atDocStart = from.line === 0 && from.ch === 0;
-    const corrected = applyTypography(selection, this.settings, note, atDocStart);
+    const to = editor.getCursor("to");
+    const endsLine = to.ch === editor.getLine(to.line).length;
+    const corrected = applyTypography(selection, this.settings, note, atDocStart, endsLine);
     if (corrected === selection) {
       new Notice(this.t.nothingToFix);
       return;

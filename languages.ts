@@ -138,6 +138,8 @@ export interface LangOptions {
   // Espaces autour des parenthèses, virgules, points, élisions ; espaces
   // doublées, fin de ligne, lignes vides.
   general: boolean;
+  // A line of prose ends with final punctuation (flagged only).
+  ending: boolean;
   // Avant ; ! ? : insécable en français, aucune espace ailleurs.
   punctuation: boolean;
   // Avant : — mêmes règles que ci-dessus.
@@ -159,6 +161,7 @@ export type LangOptionKey = Exclude<keyof LangOptions, "enabled">;
 export const DEFAULT_LANG_OPTIONS: LangOptions = {
   enabled: true,
   general: true,
+  ending: true,
   punctuation: true,
   colon: true,
   guillemets: true,
@@ -170,13 +173,13 @@ export const DEFAULT_LANG_OPTIONS: LangOptions = {
 
 // Familles de règles qui existent pour chaque langue.
 export const LANG_OPTION_KEYS: Record<Lang, LangOptionKey[]> = {
-  fr: ["general", "punctuation", "colon", "guillemets", "percent", "quotes", "dash"],
-  en: ["general", "punctuation", "colon", "percent", "quotes", "dash"],
-  de: ["general", "punctuation", "colon", "percent", "quotes", "dash", "special"],
-  ru: ["general", "punctuation", "colon", "guillemets", "quotes", "dash"],
-  tr: ["general", "punctuation", "colon", "guillemets", "percent", "quotes", "dash"],
-  it: ["general", "punctuation", "colon", "guillemets", "percent", "quotes", "dash", "special"],
-  es: ["general", "punctuation", "colon", "guillemets", "percent", "quotes", "dash", "special"],
+  fr: ["general", "ending", "punctuation", "colon", "guillemets", "percent", "quotes", "dash"],
+  en: ["general", "ending", "punctuation", "colon", "percent", "quotes", "dash"],
+  de: ["general", "ending", "punctuation", "colon", "percent", "quotes", "dash", "special"],
+  ru: ["general", "ending", "punctuation", "colon", "guillemets", "quotes", "dash"],
+  tr: ["general", "ending", "punctuation", "colon", "guillemets", "percent", "quotes", "dash"],
+  it: ["general", "ending", "punctuation", "colon", "guillemets", "percent", "quotes", "dash", "special"],
+  es: ["general", "ending", "punctuation", "colon", "guillemets", "percent", "quotes", "dash", "special"],
 };
 
 export type LangOptionsMap = Record<Lang, LangOptions>;

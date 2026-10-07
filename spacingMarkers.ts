@@ -88,6 +88,7 @@ export function createSpacingMarkerPlugin(
 ) {
   // Une espace tapée après un point est le plus souvent suivie d'un mot : le
   // repère de fin de ligne n'apparaît donc que 5 s après la dernière frappe.
+  // So does a missing final punctuation: the line is still being written.
   // Likewise for any fault against the caret (`tu |.`, `va, |`): the next
   // keystroke often fixes it.
   const LINE_END_DELAY = 5000;
@@ -119,7 +120,7 @@ export function createSpacingMarkerPlugin(
         false
       )) {
         if (
-          reason === "line-end" &&
+          (reason === "line-end" || reason === "no-ending") &&
           caretLine &&
           base + pos >= caretLine.from &&
           base + pos <= caretLine.to

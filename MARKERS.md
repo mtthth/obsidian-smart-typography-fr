@@ -27,7 +27,8 @@ In the plugin settings, "Per-language settings" lets you pick a language and swi
 
 | Family | Cases covered | Languages |
 |---|---|---|
-| Common spacing | parentheses, comma, full stop, elision, `;` `!` `?` stuck to the next word, doubled spaces, end of sentence, lines of spaces | all |
+| Common spacing | parentheses, comma, full stop, elision, `;` `!` `?` stuck to the next word, doubled spaces, spaces at the end of a line, lines of spaces | all |
+| Final punctuation | line of prose without final punctuation (flagged only) | all |
 | Before `; ! ?` | space before the sign (non-breaking in French, none elsewhere) | all |
 | Colon | space before `:` | all |
 | Guillemets « » | spaces inside the guillemets | fr, ru, tr, it, es |
@@ -56,6 +57,8 @@ Protected portions: front matter, code (inline and fenced), `$…$` formulas, `[
 | Doubled space between two signs | `two  spaces` | under the first surplus space |
 | Spaces alone on an empty line | a line made of one or more spaces | under the first space |
 | One or more spaces after the end of a sentence, at the end of a line | `End. ` + line break | under the space |
+| A single space after any other sign, at the end of a line | `A, ` + line break | under the space |
+| Line of prose without final punctuation: `. ! ? … : — –` or a closing quote `» ”`, possibly followed by emphasis, a bracket or a footnote call | `He left`, `He left,` | right of the last sign, or under a final `,` `;` |
 
 Details:
 
@@ -63,7 +66,8 @@ Details:
 - Elision is only recognised after `c d j l m n s t`, `qu`, `jusqu`, `lorsqu`, `puisqu` or `quoiqu`, so as not to mistake it for a single quotation mark (`said ‘yes’ to`).
 - Doubled spaces are not flagged in a table, after a bullet, a number, a checkbox or a `>` quote marker (alignment is intentional), nor before punctuation: that punctuation's own rule applies then. Two trailing spaces (a Markdown line break) are left alone, except after the end of a sentence.
 - An empty bullet (`1. `, `- `) does not end a sentence.
-- The end-of-sentence marker only shows on the line being typed 5 seconds after the last keystroke, so that it does not flicker at each full stop followed by a space.
+- Final punctuation is only checked on lines of prose: headings, list items, quotes and callouts, tables, separators (`***`), indented code, footnote and reference definitions, Dataview fields (`key:: value`) and lines of tags only are left alone, as are lines that end with a link, code or a comment, or are made of them only. A missing sign is never added by the fix command: only the author knows which one.
+- The end-of-line markers (useless space, missing final punctuation) only show on the line being typed 5 seconds after the last keystroke, so that they do not flicker while the sentence is being written.
 - Likewise, a fault right against the caret, with only spaces in between (`tu |.`, `va, |`), waits 5 seconds after the last keystroke, since the next one often fixes it. It shows at once when the caret moves away.
 
 ## French

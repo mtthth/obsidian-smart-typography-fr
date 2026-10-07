@@ -29,7 +29,8 @@ Dans les réglages du plugin, « Réglages par langue » permet de choisir une l
 
 | Famille | Cas concernés | Langues |
 |---|---|---|
-| Espaces courantes | parenthèses, virgule, point, élision, `;` `!` `?` collés, espaces doublées, fin de phrase, lignes d'espaces | toutes |
+| Espaces courantes | parenthèses, virgule, point, élision, `;` `!` `?` collés, espaces doublées, espaces en bout de ligne, lignes d'espaces | toutes |
+| Ponctuation finale | ligne de prose sans ponctuation finale (signalée seulement) | toutes |
 | Avant `; ! ?` | espace avant (insécable en français, aucune ailleurs) | toutes |
 | Deux-points | espace avant `:` | toutes |
 | Guillemets « » | espaces dans les guillemets | fr, ru, tr, it, es |
@@ -58,6 +59,8 @@ Les portions protégées : métadonnées, code (en ligne et en bloc), formules `
 | Espace doublée entre deux signes | `deux  espaces` | sous la première espace en trop |
 | Espaces seules sur une ligne vide | une ligne faite d'une ou plusieurs espaces | sous la première espace |
 | Une ou plusieurs espaces après une fin de phrase, en bout de ligne | `Fin. ` + retour à la ligne | sous l'espace |
+| Une espace seule après tout autre signe, en bout de ligne | `A, ` + retour à la ligne | sous l'espace |
+| Ligne de prose sans ponctuation finale : `. ! ? … : — –` ou guillemet fermant `» ”`, suivis ou non d'une emphase, d'une parenthèse ou d'un appel de note | `Il part`, `Il part,` | à droite du dernier signe, ou sous la `,` ou le `;` final |
 
 Précisions :
 
@@ -65,7 +68,8 @@ Précisions :
 - L'élision n'est reconnue qu'après `c d j l m n s t`, `qu`, `jusqu`, `lorsqu`, `puisqu` ou `quoiqu`, pour ne pas confondre avec un guillemet simple (`dit ‘oui’ à`).
 - L'espace doublée n'est pas signalée dans un tableau, après une puce, un numéro, une case à cocher ou un `>` de citation (l'alignement est voulu), ni devant une ponctuation : c'est alors la règle de cette ponctuation qui s'applique. Les deux espaces en fin de ligne (saut de ligne Markdown) sont laissées, sauf après une fin de phrase.
 - Une puce vide (`1. `, `- `) n'est pas une fin de phrase.
-- Le repère de fin de phrase n'apparaît sur la ligne en cours de frappe que 5 secondes après la dernière frappe, pour ne pas clignoter à chaque point suivi d'une espace.
+- La ponctuation finale n'est vérifiée que sur les lignes de prose : titres, éléments de liste, citations et callouts, tableaux, séparateurs (`***`), code indenté, définitions de notes et de références, champs Dataview (`clé:: valeur`) et lignes faites seulement de balises sont épargnés, comme les lignes qui finissent par un lien, du code ou un commentaire, ou n'en contiennent que. La commande de correction n'ajoute jamais le signe manquant : seul l'auteur sait lequel.
+- Les repères de fin de ligne (espace inutile, ponctuation finale manquante) n'apparaissent sur la ligne en cours de frappe que 5 secondes après la dernière frappe, pour ne pas clignoter pendant que la phrase s'écrit.
 - De même, une faute collée au curseur, à des espaces près (`tu |.`, `va, |`), attend 5 secondes après la dernière frappe, car la suivante la corrige souvent. Elle apparaît aussitôt que le curseur s'éloigne.
 
 ## Français

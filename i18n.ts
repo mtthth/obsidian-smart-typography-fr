@@ -124,6 +124,7 @@ const en: UiStrings = {
     "double-space": "Doubled space.",
     "blank-line": "Spaces alone on an empty line.",
     "line-end": "Useless space at the end of the line.",
+    "no-ending": "Line without final punctuation (. ! ? … : — or a closing quote).",
     "no-space": "No space here in this language.",
     "percent-none": "No space between the number and %.",
     "percent-tr": "The % sign comes before the number: %50.",
@@ -192,7 +193,12 @@ const en: UiStrings = {
       case "general":
         return {
           name: "Common spacing",
-          desc: "Around parentheses, commas and full stops; elision (l’obscurité); doubled spaces, space ending a sentence, lines of spaces only.",
+          desc: "Around parentheses, commas and full stops; elision (l’obscurité); doubled spaces, spaces at the end of a line, lines of spaces only.",
+        };
+      case "ending":
+        return {
+          name: "Final punctuation",
+          desc: "Flags a line of prose that does not end with . ! ? … : — – or a closing quote (» ”). Headings, lists, quotes, tables and code are left alone. Turn it off for verse.",
         };
       case "punctuation":
         return {
@@ -320,6 +326,7 @@ const fr: UiStrings = {
     "double-space": "Espace doublée.",
     "blank-line": "Espaces seules sur une ligne vide.",
     "line-end": "Espace inutile en fin de ligne.",
+    "no-ending": "Ligne sans ponctuation finale (. ! ? … : — ou guillemet fermant).",
     "no-space": "Pas d'espace ici dans cette langue.",
     "percent-none": "Pas d'espace entre le nombre et %.",
     "percent-tr": "Le signe % précède le nombre : %50.",
@@ -389,7 +396,12 @@ const fr: UiStrings = {
       case "general":
         return {
           name: "Espaces courantes",
-          desc: "Autour des parenthèses, virgules et points ; élision (l’obscurité) ; espaces doublées, espace en fin de phrase, lignes d'espaces seules.",
+          desc: "Autour des parenthèses, virgules et points ; élision (l’obscurité) ; espaces doublées, espaces en bout de ligne, lignes d'espaces seules.",
+        };
+      case "ending":
+        return {
+          name: "Ponctuation finale",
+          desc: "Signale une ligne de prose qui ne finit pas par . ! ? … : — – ou un guillemet fermant (» ”). Titres, listes, citations, tableaux et code sont épargnés. À désactiver pour des vers.",
         };
       case "punctuation":
         return {

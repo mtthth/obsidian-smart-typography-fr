@@ -62,7 +62,7 @@ It is an explicit command: it does not depend on the folder scope, nor on the "S
 | `enfin(frf)` | space added before the parenthesis (except `chat(s)`, `allié(e)`) |
 | `fin;suite` | space added after a `;` `!` `?` stuck to a letter |
 | `l ’ obscurité`, `l’ obscurité` | elision tightened: `l’obscurité` |
-| `Fin. ` at the end of a line | trailing spaces removed |
+| `Fin. ` or `A, ` at the end of a line | trailing spaces removed (two spaces after a word, a Markdown line break, are kept) |
 | a line made of spaces | spaces removed |
 
 The command is idempotent: running it again on text that is already fixed changes nothing. It never touches code blocks and spans, formulas, links and embeds, URLs, HTML tags, reference and footnote definitions (`[ref]: url`, `[^1]: text`), comments (`%% ... %%`), nor the front matter when the selection starts with it. Ambiguous cases are left as they are: `12:30`, `key:: value` (Dataview), `C:\folder`, `:)` and unpaired straight quotes (`5"`).
@@ -104,7 +104,8 @@ Setting **"Flag typography mistakes"** (on by default). In the scoped folders, a
 | `(` stuck to the preceding word | `enfin(frf)` | `enfin (frf)` (except `chat(s)`, `allié(e)`) |
 | `;` `!` `?` stuck to the next letter | `fin;suite` | `fin; suite` |
 | elision with a space | `l’ obscurité`, `l ’obscurité` | `l’obscurité` |
-| one or more spaces after the end of a sentence, at the end of a line | `Fin. ` | `Fin.` (the marker waits 5 s on the line being typed) |
+| useless space at the end of a line: one or more after the end of a sentence, one after any other sign | `Fin. `, `A, ` | `Fin.`, `A,` (the marker waits 5 s on the line being typed) |
+| line of prose without final punctuation (`. ! ? … : — –` or a closing quote) | `Il part`, `Il part,` | flagged only, never fixed (the marker waits 5 s on the line being typed) |
 | spaces alone on an empty line | `   ` | empty line |
 
 **By language**
@@ -119,7 +120,7 @@ Setting **"Flag typography mistakes"** (on by default). In the scoped folders, a
 | Italian | no space before `;` `:` `!` `?` nor inside `«…»`; `50%` stuck; `È`, never `E'` |
 | Spanish | no space before `;` `:` `!` `?` nor inside `«…»`; paired `¿…?` and `¡…!`, no space after `¿` `¡`; `50 %` (non-breaking); `—` dash |
 
-Decimals (`3,5`), extensions (`a.md`), ellipses, emoticons (`:)`), table alignments (`:---`), bullets, URLs, code and other protected zones are not flagged. Doubled spaces are allowed in tables (lines starting with `|`, or a borderless block that contains a `---|---` line), in indentation, after a bullet, a number or a `>`, and at the end of a line, where two spaces force a line break (after the end of a sentence, though, trailing spaces are flagged). In French, an existing non-breaking space is never flagged; an ordinary space next to it is. Each family of rules can be switched off language by language in the settings (see [Added settings](#added-settings)).
+Decimals (`3,5`), extensions (`a.md`), ellipses, emoticons (`:)`), table alignments (`:---`), bullets, URLs, code and other protected zones are not flagged. Doubled spaces are allowed in tables (lines starting with `|`, or a borderless block that contains a `---|---` line), in indentation, after a bullet, a number or a `>`, and at the end of a line, where two spaces force a line break (after the end of a sentence, though, trailing spaces are flagged; a single trailing space always is). In French, an existing non-breaking space is never flagged; an ordinary space next to it is. Each family of rules can be switched off language by language in the settings (see [Added settings](#added-settings)).
 
 It is purely visual, the text is never modified, and the fix command sorts out what can be sorted out, not the missing `¿`, whose opening it cannot place. The command's protected zones are protected here too; the front matter is recognised on the whole note. Known limit: in a code block or a multi-line `%% … %%` comment whose opening (``` or `%%`) is above the visible part, spaces may be flagged wrongly. The marker is provided by `styles.css`, which `deploy.ps1` copies along with `main.js`.
 

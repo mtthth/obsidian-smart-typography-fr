@@ -24,8 +24,10 @@ const { FINE, NBSP, THIN } = await import(pathToFileURL(path.join(out, "frenchRu
 
 // Anciens interrupteurs français, traduits en réglages par langue.
 const settings = (over = {}) => {
-	const { frenchColon, frenchGuillemets, frenchPercent, langOptions, ...rest } = over;
+	const { frenchColon, frenchGuillemets, frenchPercent, langOptions, ending = false, ...rest } = over;
 	const options = langOptions ?? defaultLangOptions();
+	// Most cases are fragments without final punctuation: that rule is only on where tested.
+	for (const lang of Object.keys(options)) options[lang].ending = ending;
 	if (frenchColon !== undefined) options.fr.colon = frenchColon;
 	if (frenchGuillemets !== undefined) options.fr.guillemets = options.fr.quotes = frenchGuillemets;
 	if (frenchPercent !== undefined) options.fr.percent = frenchPercent;
@@ -224,6 +226,25 @@ check("same fault further from the caret", againstCaret("et tu . Puis", 12), [fa
 check("sign before the caret, spaces between", [touchesCaret("va, ", 2, 4), touchesCaret("va,", 2, 3)], [true, true]);
 check("a word between sign and caret", [touchesCaret("va, et", 2, 6), touchesCaret("tu .", 3, 0)], [false, false]);
 check("not across a line break", touchesCaret("va,\n", 2, 4), false);
+
+section("Final punctuation and trailing spaces");
+const withEnding = settings({ ending: true });
+const endings = (text, s = withEnding) => findFaultySigns(text, s, FR, false).map(({ pos, side, reason }) => [pos, side, reason]);
+check("four unfinished paragraphs", endings("A\n\nA,\n\nA, \n\nA. \n"), [
+	[0, "after", "no-ending"], [4, "on", "no-ending"], [8, "on", "no-ending"], [9, "on", "line-end"], [14, "on", "line-end"],
+]);
+check("accepted endings",
+	endings(`Fin.\nOui${FINE}!\nEt…\nIl dit${NBSP}:\nJe voulais —\nPuis –\n«${FINE}Oui${FINE}»\n“Yes”\n*Fin.*\nFin.[^1]\n(Fin.)\n`), []);
+check("semicolon on its sign, word after it", endings(`Il part${FINE};\nIl part`), [[8, "on", "no-ending"], [16, "after", "no-ending"]]);
+check("not prose: left alone",
+	endings("# Titre\n- item\n1. item\n> citation\n| a | b |\n|---|---|\n***\n#tag #autre\nclé:: valeur\n[[Lien]]\n![[image.png]]\n    code\n```\ncode\n```\n[^1]: note\n"), []);
+check("line ending with a link or code: left alone", endings("Voir [[Note]]\nTaper `ls`\n"), []);
+check("option off", endings("A\nB,\n", settings()), []);
+check("Markdown line break kept, after a comma", endings("A,  \nB.\n").map(([, , reason]) => reason), ["no-ending"]);
+typo("A, \nB.", "A,\nB.", "trailing space after a comma removed");
+unchanged("A,  \nB.", "Markdown line break kept");
+check("selection ending mid-line keeps its last space", applyTypography("Il dit ", settings(), FR, true, false), "Il dit ");
+check("selection ending a line loses it", applyTypography("Il dit ", settings(), FR), "Il dit");
 
 section("Règles par langue : correction");
 const typoIn = (code, input, expected, name) => check(`${code} : ${name}`, applyTypography(input, settings(), lang(code)), expected);

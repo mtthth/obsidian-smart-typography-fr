@@ -212,8 +212,10 @@ function doubleSpaces(text: string, spans: [number, number][]): [number, number]
 // ou plusieurs espaces après une fin de phrase en bout de ligne (même un saut
 // de ligne Markdown : après une fin de phrase, il est superflu). Dans les deux
 // cas, rien à garder : la correction les supprime.
+// A single space or tab after any other sign is useless too (`A, `); two spaces
+// or more there are a Markdown line break, and are kept.
 const EDGE_SPACE_SOURCE =
-  "^[ \\t]+(?=\\r?$)|(?<=[.!?…»”])[ \\t]+(?=\\r?$)";
+  "^[ \\t]+(?=\\r?$)|(?<=[.!?…»”])[ \\t]+(?=\\r?$)|(?<=[^\\s.!?…»”])[ \\t](?=\\r?$)";
 
 type EdgeKind = "blank-line" | "line-end";
 
@@ -235,6 +237,50 @@ function edgeSpaces(
     if (!blank && LINE_PREFIX_RE.test(text.slice(lineStart, start))) continue;
     found.push({ start, end, kind: blank ? "blank-line" : "line-end" });
   }
+  return found;
+}
+
+/* ------------------------------------------------------------------ */
+/* Final punctuation                                                   */
+/* ------------------------------------------------------------------ */
+
+// Lines that are not prose: heading, quote or callout, list item, separator,
+// footnote or link definition, Dataview field, tags only, indented code.
+const NOT_PROSE_RE =
+  /^(?: {4}|\t)|^[ \t]*(?:#{1,6}(?:[ \t]|$)|>|[-*+][ \t]|\d+[.)][ \t]|(?:[-*_][ \t]*){3,}$|\[\^?[^\]\n]*\]:|[^\s:][^:\n]*::|(?:#[^\s#]+[ \t]*)+$)/;
+// What may follow the final sign: emphasis, closing bracket, quote, footnote
+// call, spaces (flagged on their own).
+const TRAILING_RE = /(?:[*_~)\]'"’\s]|\[\^[^\]\n]*\])+$/;
+// Accepted endings: . ! ? … : — – and a closing guillemet or quote.
+const FINAL_SIGN_RE = /[.!?…:—–»”]$/;
+// Punctuation that cannot end a line: the marker goes on it, not after it.
+const WRONG_FINAL_RE = /[,;]$/;
+const LETTER_OR_DIGIT_RE = /[\p{L}\p{N}]/u;
+
+// Lines of prose that do not end with a final sign: the position of the last
+// sign (`on` for a comma or a semicolon, `after` otherwise). A line whose end
+// is protected (link, code, comment) or whose text is all protected is left
+// alone, as are tables.
+function unfinishedLines(
+  text: string,
+  spans: [number, number][]
+): { pos: number; side: SignSide }[] {
+  const plain = withoutProtected(text, spans);
+  const tables = tableLines(text);
+  const found: { pos: number; side: SignSide }[] = [];
+  let start = 0;
+  text.split("\n").forEach((raw, i) => {
+    const lineStart = start;
+    start += raw.length + 1;
+    const line = raw.replace(/\r$/, "");
+    if (tables[i] || NOT_PROSE_RE.test(line)) return;
+    if (!LETTER_OR_DIGIT_RE.test(plain.slice(lineStart, lineStart + line.length))) return;
+    const body = line.replace(TRAILING_RE, "");
+    if (body === "" || FINAL_SIGN_RE.test(body)) return;
+    const pos = lineStart + body.length - 1;
+    if (spans.some(([a, b]) => pos >= a && pos < b)) return;
+    found.push({ pos, side: WRONG_FINAL_RE.test(body) ? "on" : "after" });
+  });
   return found;
 }
 
@@ -389,11 +435,14 @@ function rulesFor(s: SmartTypographySettings, lang: Lang): TypoRule[] {
 
 // Corrige le texte, hors des zones protégées, selon la langue de chaque ligne.
 // `atDocStart` : le texte commence le document (voir protectedRanges).
+// `endsLine`: the text stops at the end of a line. Otherwise spaces at its very
+// end separate it from what follows, and are kept.
 export function applyTypography(
   text: string,
   s: SmartTypographySettings,
   ctx: LangContext,
-  atDocStart = true
+  atDocStart = true,
+  endsLine = true
 ): string {
   const outer = protectedRanges(text, atDocStart);
   const langAt0 = languageResolver(text, outer, ctx);
@@ -403,7 +452,9 @@ export function applyTypography(
   };
   const edits = [
     ...doubleSpaces(text, outer).map(([start, end]) => ({ start, end, repl: " " })),
-    ...edgeSpaces(text, outer).map(({ start, end }) => ({ start, end, repl: "" })),
+    ...edgeSpaces(text, outer)
+      .filter(({ end }) => endsLine || end < text.length)
+      .map(({ start, end }) => ({ start, end, repl: "" })),
   ]
     .filter(({ start }) => general(start))
     .sort((a, b) => a.start - b.start);
@@ -466,7 +517,8 @@ export type SignReason =
   | "dash" // trait d'union entre espaces
   | "double-space" // espace doublée
   | "blank-line" // espaces seules sur une ligne vide
-  | "line-end" // espace en fin de phrase, en bout de ligne
+  | "line-end" // espace inutile en bout de ligne
+  | "no-ending" // line of prose without final punctuation
   | "no-space" // espace interdite dans cette langue
   | "percent-none" // 50% sans espace
   | "percent-tr" // %50 en turc
@@ -611,6 +663,13 @@ export function findFaultySigns(
   for (const { start, kind } of edgeSpaces(text, spans)) {
     if (!generalAt(start)) continue;
     signs.set(`${start}:on`, { pos: start, side: "on", reason: kind, lang: langAt(start) });
+  }
+
+  for (const { pos, side } of unfinishedLines(text, spans)) {
+    const lang = langAt(pos);
+    const o = s.langOptions[lang];
+    if (!o.enabled || !o.ending) continue;
+    signs.set(`${pos}:${side}`, { pos, side, reason: "no-ending", lang });
   }
 
   // Espagnol : « ? » et « ! » exigent leur ouvrant ¿ ¡ plus tôt sur la ligne,
