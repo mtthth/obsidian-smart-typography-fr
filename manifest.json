@@ -1,7 +1,7 @@
 {
 	"id": "smart-typography-fr",
 	"name": "Smart Typography FR",
-	"version": "1.2.0",
+	"version": "1.3.0",
 	"minAppVersion": "0.15.0",
 	"description": "Smart typography with French non-breaking spaces, limited to chosen folders. Based on Smart Typography by mgmeyers.",
 	"author": "Matthieu Thomas (cidrolin)",
