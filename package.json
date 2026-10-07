@@ -1,6 +1,6 @@
 {
   "name": "obsidian-smart-typography-fr",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Typographie intelligente pour Obsidian avec espaces insécables françaises, d'après Smart Typography de mgmeyers",
   "main": "main.js",
   "scripts": {
