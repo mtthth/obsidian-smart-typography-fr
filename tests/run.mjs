@@ -219,6 +219,7 @@ section("Faults against the caret, held back while typing");
 const againstCaret = (text, caret) => findFaultySigns(text, settings(), FR, false).map(({ pos }) => touchesCaret(text, pos, caret));
 check("space typed before an existing full stop", againstCaret("et tu .", 6), [true]);
 check("comma and space typed before an existing full stop", againstCaret("et tu va, .", 10), [true]);
+check("space typed before a closing guillemet, end of paragraph", againstCaret("« Et tu va, »\n\nSuite.", 12), [false, true]);
 check("same fault further from the caret", againstCaret("et tu . Puis", 12), [false]);
 check("sign before the caret, spaces between", [touchesCaret("va, ", 2, 4), touchesCaret("va,", 2, 3)], [true, true]);
 check("a word between sign and caret", [touchesCaret("va, et", 2, 6), touchesCaret("tu .", 3, 0)], [false, false]);
