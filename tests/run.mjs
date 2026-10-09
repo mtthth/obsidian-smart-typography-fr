@@ -88,6 +88,14 @@ unchanged("Voir https://exemple.fr/?a=1&b=2;c=3", "URL avec ? ; et =");
 unchanged("www.exemple.fr/?x=1", "URL sans schéma");
 unchanged("Du `code ; ici` et voilà", "code en ligne");
 unchanged("```\nlet x = 1; // ok ?\n```", "bloc de code");
+unchanged("~~~\nif (a ; b) { x = \"y\" ; }\n~~~", "bloc de code à tildes");
+unchanged("> ~~~\n> f(a , b) ; 'x'\n> ~~~", "bloc à tildes dans une citation");
+typo("Avant ;\n~~~js\na ; b\n~~~\nAprès ;", `Avant${FINE};\n~~~js\na ; b\n~~~\nAprès${FINE};`, "texte autour d'un bloc à tildes corrigé");
+typo("Voici :\n\n    f(a , b) ; x = 'y'\n\n\treturn 'z'\n\nFin ;", `Voici${NBSP}:\n\n    f(a , b) ; x = 'y'\n\n\treturn 'z'\n\nFin${FINE};`, "code indenté après une ligne vide, lignes vides comprises");
+unchanged("    f(a , b) ; 'x'\nTexte", "code indenté en tête de note");
+typo("- point\n\t- sous-point ; suite\n\n\tsuite du point , ici\n- item\n\n    suite de l'item ;",
+	`- point\n\t- sous-point${FINE}; suite\n\n\tsuite du point, ici\n- item\n\n    suite de l’item${FINE};`, "indentation d'une liste : pas du code");
+typo("Texte ;\n    suite ;", `Texte${FINE};\n    suite${FINE};`, "ligne indentée sans ligne vide avant : pas du code");
 unchanged("[lien](https://x.fr/a?b=1)", "lien markdown");
 unchanged("![[image.png]]", "image intégrée");
 unchanged("voir ![[img.png]]", "pas de fine avant une intégration");
@@ -191,6 +199,8 @@ uni("mot - mot", [[4, "on", "dash"]], "repère sur le trait d'union");
 uni("- item\n| a | - |", [], "puce et tableau sans repère");
 uni("> - un\n> [!note] Titre\n> - [ ] tâche", [], "puces d'une citation ou d'un callout sans repère");
 uni("> mot - mot", [[6, "on", "dash"]], "repère sur le trait d'union dans une citation");
+uni("~~~\nprint('a' , b)\n~~~", [], "bloc à tildes sans repère");
+uni("Texte.\n\n    print('a' , b)  \n", [], "code indenté sans repère");
 
 section("Espaces doublées");
 universal("Deux  espaces,   trois", "Deux espaces, trois", "espaces doublées réduites");

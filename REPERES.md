@@ -41,7 +41,7 @@ Dans les réglages du plugin, « Réglages par langue » permet de choisir une l
 
 ## Ce qui n'est jamais signalé
 
-Les portions protégées : métadonnées, code (en ligne et en bloc), formules `$…$`, liens `[[…]]` et `[…](…)`, URL, balises HTML, entités (`&nbsp;`), marqueurs de callout (`[!NOTE]`), commentaires `%% … %%`, libellés de notes et de références (`[^1]:`). Une espace collée à une portion protégée est laissée, faute de contexte.
+Les portions protégées : métadonnées, code (en ligne, en bloc entre ``` ou `~~~`, indenté après une ligne vide), formules `$…$`, liens `[[…]]` et `[…](…)`, URL, balises HTML, entités (`&nbsp;`), marqueurs de callout (`[!NOTE]`), commentaires `%% … %%`, libellés de notes et de références (`[^1]:`). Une espace collée à une portion protégée est laissée, faute de contexte.
 
 ## Toutes les langues
 

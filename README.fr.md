@@ -197,8 +197,9 @@ correction règle ce qui peut l'être — pas le `¿` manquant, dont elle ne sai
 où placer l'ouverture. Les zones protégées de la commande le sont aussi
 ici ; le bloc de métadonnées est reconnu sur la note entière. Limite connue :
 dans un bloc de code ou un commentaire `%% … %%` sur plusieurs lignes dont
-l'ouverture (``` ou `%%`) est au-dessus de la partie visible, des espaces
-peuvent être signalées à tort. Ce repère est fourni par
+l'ouverture (```, `~~~` ou `%%`) est au-dessus de la partie visible, ou dans
+du code indenté dont le paragraphe précédent l'est, des espaces peuvent être
+signalées à tort. Ce repère est fourni par
 `styles.css`, que `deploy.ps1` copie avec `main.js`.
 
 ## Garde-fous intégrés

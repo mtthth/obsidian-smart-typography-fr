@@ -39,7 +39,7 @@ In the plugin settings, "Per-language settings" lets you pick a language and swi
 
 ## What is never flagged
 
-Protected portions: front matter, code (inline and fenced), `$…$` formulas, `[[…]]` and `[…](…)` links, URLs, HTML tags, entities (`&nbsp;`), callout markers (`[!NOTE]`), `%% … %%` comments, note and reference labels (`[^1]:`). A space stuck to a protected portion is left alone, for lack of context.
+Protected portions: front matter, code (inline, fenced with ``` or `~~~`, indented after a blank line), `$…$` formulas, `[[…]]` and `[…](…)` links, URLs, HTML tags, entities (`&nbsp;`), callout markers (`[!NOTE]`), `%% … %%` comments, note and reference labels (`[^1]:`). A space stuck to a protected portion is left alone, for lack of context.
 
 ## All languages
 

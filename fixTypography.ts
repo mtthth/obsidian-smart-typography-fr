@@ -18,8 +18,24 @@ import { SmartTypographySettings } from "types";
 // n'est retenu que si le texte commence aussi le document : ailleurs, « --- »
 // est un séparateur, pas l'ouverture des métadonnées.
 const FRONTMATTER_SOURCE = "^---\\r?\\n[\\s\\S]*?\\r?\\n---";
+// Indented code: lines indented by four spaces or a tab, blank lines between
+// them included.
+const INDENTED_LINES =
+  "(?: {4}|\\t)[^\\r\\n]*(?:\\r?\\n(?:[ \\t]*\\r?\\n)*(?: {4}|\\t)[^\\r\\n]*)*";
+// An indented code block follows a blank line, itself after a line that is
+// neither indented nor a list item: under a list item, indentation continues
+// the item (`- item` / `\t- sub-item`).
+const INDENTED_CODE_SOURCE =
+  "(?<=\\n)(?= {4}|\\t)(?<=(?:^|\\n)(?![-*+][ \\t]|\\d+[.)][ \\t])\\S[^\\n]*\\n(?:[ \\t]*\\r?\\n)+)" +
+  INDENTED_LINES;
+// At the very start of the document, an indented line is code too. Elsewhere,
+// the start of the text gives no context, and is left alone.
+const INDENTED_CODE_AT_START_SOURCE = "(?<=^(?:[ \\t]*\\r?\\n)*)(?= {4}|\\t)" + INDENTED_LINES;
 const PROTECTED_SOURCES = [
   "```[\\s\\S]*?```",
+  // Fenced with tildes: both fences start their line, after any quote markers.
+  "(?=~~~)(?<=(?:^|\\n)[ \\t]*(?:>[ \\t]*)*)~~~[\\s\\S]*?\\n[ \\t]*(?:>[ \\t]*)*~~~",
+  INDENTED_CODE_SOURCE,
   "`[^`\\n]*`",
   "\\$\\$[\\s\\S]*?\\$\\$",
   "\\$[^\\s$][^$\\n]*\\$",
@@ -38,7 +54,11 @@ const PROTECTED_SOURCES = [
   "[a-z][a-z0-9+.-]*:\\/\\/\\S+",
   "www\\.\\S+",
 ];
-const PROTECTED_SOURCE = [FRONTMATTER_SOURCE, ...PROTECTED_SOURCES].join("|");
+const PROTECTED_SOURCE = [
+  FRONTMATTER_SOURCE,
+  INDENTED_CODE_AT_START_SOURCE,
+  ...PROTECTED_SOURCES,
+].join("|");
 const PROTECTED_SOURCE_NO_FRONTMATTER = PROTECTED_SOURCES.join("|");
 
 // `atDocStart` : le texte commence le document, et peut donc s'ouvrir sur le
