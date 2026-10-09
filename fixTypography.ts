@@ -546,6 +546,36 @@ export function applyTypography(
   return result + fixRange(last, text.length);
 }
 
+export interface TextRange {
+  from: number;
+  to: number;
+}
+
+// Corrige chaque plage du document (une sélection) d'après son propre
+// contexte : seule une plage qui part du début du document peut s'ouvrir sur
+// les métadonnées, et seule celle qui finit une ligne perd ses espaces de fin.
+// Donne les changements, null s'il n'y en a aucun, et les plages, triées, sur
+// le texte corrigé.
+export function fixRanges(
+  doc: string,
+  ranges: TextRange[],
+  s: SmartTypographySettings,
+  ctx: LangContext
+): { changes: (TextRange & { text: string })[]; ranges: TextRange[] } | null {
+  const changes: (TextRange & { text: string })[] = [];
+  const fixed: TextRange[] = [];
+  let shift = 0;
+  for (const { from, to } of [...ranges].sort((a, b) => a.from - b.from)) {
+    const text = doc.slice(from, to);
+    const endsLine = to === doc.length || doc[to] === "\n" || doc[to] === "\r";
+    const corrected = applyTypography(text, s, ctx, from === 0, endsLine);
+    if (corrected !== text) changes.push({ from, to, text: corrected });
+    fixed.push({ from: from + shift, to: from + shift + corrected.length });
+    shift += corrected.length - text.length;
+  }
+  return changes.length ? { changes, ranges: fixed } : null;
+}
+
 /* ------------------------------------------------------------------ */
 /* Repérage                                                            */
 /* ------------------------------------------------------------------ */

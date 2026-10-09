@@ -83,7 +83,8 @@ commandes, et clic droit quand du texte est sélectionné) applique d'un coup
 au texte sélectionné les règles de la langue de chaque ligne (voir
 [Langues](#langues)), avec les mêmes réglages que la saisie : caractère
 d'espace fine, et familles de règles cochées pour chaque langue. Elle n'a pas de raccourci par défaut ; attribuez-le dans Réglages
-→ Raccourcis clavier. Tout s'annule d'un seul `Ctrl + Z`, et la sélection
+→ Raccourcis clavier. Avec plusieurs sélections (plusieurs curseurs), chacune
+est corrigée à part. Tout s'annule d'un seul `Ctrl + Z`, et la sélection
 reste active après coup.
 
 C'est une commande explicite : elle ne dépend pas de la portée par dossier, ni

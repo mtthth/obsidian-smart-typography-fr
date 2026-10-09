@@ -45,7 +45,7 @@ Punctuation following a closing mark also gets its space, placed after the mark:
 
 ## Fixing text that is already written
 
-The command **"Fix typography in selection"** (command palette, and right-click when text is selected) applies in one go to the selected text the rules of each line's language (see [Languages](#languages)), with the same settings as typing: narrow space character, and the families of rules ticked for each language. It has no default shortcut; assign one in Settings → Hotkeys. Everything undoes with a single `Ctrl + Z`, and the selection stays active afterwards.
+The command **"Fix typography in selection"** (command palette, and right-click when text is selected) applies in one go to the selected text the rules of each line's language (see [Languages](#languages)), with the same settings as typing: narrow space character, and the families of rules ticked for each language. It has no default shortcut; assign one in Settings → Hotkeys. With several selections (multiple cursors), each is fixed on its own. Everything undoes with a single `Ctrl + Z`, and the selection stays active afterwards.
 
 It is an explicit command: it does not depend on the folder scope, nor on the "Spaces before double punctuation" switch.
 

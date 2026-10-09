@@ -43,7 +43,7 @@ import {
   legacySmartQuoteRules,
 } from "legacyInputRules";
 import { Extension } from "@codemirror/state";
-import { TYPO_KEY, applyTypography, noteTypo } from "fixTypography";
+import { TYPO_KEY, fixRanges, noteTypo } from "fixTypography";
 import { createSpacingMarkerPlugin, noteTypoOf } from "spacingMarkers";
 import { revertField, rewriteInput, rewriteSpec } from "inputRewrite";
 import {
@@ -546,30 +546,44 @@ export default class SmartTypography extends Plugin {
   // Correction d'un texte déjà écrit, selon les réglages du plugin. Commande
   // explicite : elle ne dépend pas de la portée par dossier.
   fixTypography(editor: Editor) {
-    if (!editor.somethingSelected()) {
+    // Chaque sélection est corrigée à part : avec plusieurs curseurs, elles
+    // ne reçoivent pas toutes le même texte.
+    const ranges = editor
+      .listSelections()
+      .map(({ anchor, head }) => {
+        const [a, b] = [editor.posToOffset(anchor), editor.posToOffset(head)];
+        return { from: Math.min(a, b), to: Math.max(a, b) };
+      })
+      .filter(({ from, to }) => from < to);
+    if (ranges.length === 0) {
       new Notice(this.t.selectFirst);
       return;
     }
 
-    const selection = editor.getSelection();
-    const from = editor.getCursor("from");
-    const note = noteTypo(editor.getValue(), this.settings.defaultLanguage);
-    // Les métadonnées ne peuvent ouvrir la sélection que si elle part du tout
-    // début de la note : ailleurs, « --- » est un séparateur.
-    const atDocStart = from.line === 0 && from.ch === 0;
-    const to = editor.getCursor("to");
-    const endsLine = to.ch === editor.getLine(to.line).length;
-    const corrected = applyTypography(selection, this.settings, note, atDocStart, endsLine);
-    if (corrected === selection) {
+    const doc = editor.getValue();
+    const note = noteTypo(doc, this.settings.defaultLanguage);
+    const fixed = fixRanges(doc, ranges, this.settings, note);
+    if (!fixed) {
       new Notice(this.t.nothingToFix);
       return;
     }
 
-    // Un seul replaceSelection : la correction s'annule d'un seul Ctrl+Z. La
-    // sélection est rétablie ensuite, la plupart des corrections étant des
+    // Une seule transaction : la correction s'annule d'un seul Ctrl+Z. Les
+    // sélections sont rétablies ensuite, la plupart des corrections étant des
     // espaces invisibles.
-    editor.replaceSelection(corrected);
-    editor.setSelection(from, editor.getCursor());
+    editor.transaction({
+      changes: fixed.changes.map(({ from, to, text }) => ({
+        from: editor.offsetToPos(from),
+        to: editor.offsetToPos(to),
+        text,
+      })),
+    });
+    editor.setSelections(
+      fixed.ranges.map(({ from, to }) => ({
+        anchor: editor.offsetToPos(from),
+        head: editor.offsetToPos(to),
+      }))
+    );
     new Notice(this.t.fixed);
   }
 

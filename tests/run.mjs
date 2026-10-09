@@ -18,7 +18,7 @@ for (const name of ["fixTypography", "frenchRules", "inputRules", "inputRewrite"
 	writeFileSync(path.join(out, `${name}.mjs`), js);
 }
 
-const { applyTypography, findFaultySigns, noteTypo, touchesCaret } = await import(pathToFileURL(path.join(out, "fixTypography.mjs")).href);
+const { applyTypography, findFaultySigns, fixRanges, noteTypo, touchesCaret } = await import(pathToFileURL(path.join(out, "fixTypography.mjs")).href);
 const { detectLanguage, defaultLangOptions } = await import(pathToFileURL(path.join(out, "languages.mjs")).href);
 const { revertField, rewriteInput, rewriteSpec } = await import(pathToFileURL(path.join(out, "inputRewrite.mjs")).href);
 const { EditorSelection, EditorState } = await import("@codemirror/state");
@@ -271,6 +271,26 @@ typo("A, \nB.", "A,\nB.", "trailing space after a comma removed");
 unchanged("A,  \nB.", "Markdown line break kept");
 check("selection ending mid-line keeps its last space", applyTypography("Il dit ", settings(), FR, true, false), "Il dit ");
 check("selection ending a line loses it", applyTypography("Il dit ", settings(), FR), "Il dit");
+
+section("Plusieurs sélections");
+const fixAll = (doc, ranges, name, expected) => check(name, fixRanges(doc, ranges, settings(), FR), expected);
+fixAll("a  b ;\nc  d ;", [{ from: 7, to: 13 }, { from: 0, to: 6 }], "chaque sélection corrigée à part, plages recalculées", {
+	changes: [{ from: 0, to: 6, text: `a b${FINE};` }, { from: 7, to: 13, text: `c d${FINE};` }],
+	ranges: [{ from: 0, to: 5 }, { from: 6, to: 11 }],
+});
+fixAll("Bien.\nQuoi ?", [{ from: 0, to: 5 }, { from: 6, to: 12 }], "une sélection sans faute garde sa place", {
+	changes: [{ from: 6, to: 12, text: `Quoi${FINE}?` }],
+	ranges: [{ from: 0, to: 5 }, { from: 6, to: 12 }],
+});
+fixAll("Il dit oui", [{ from: 0, to: 7 }], "sélection finissant en milieu de ligne : espace gardée", null);
+fixAll("Il dit \nsuite", [{ from: 0, to: 7 }], "sélection finissant une ligne : espace retirée", {
+	changes: [{ from: 0, to: 7, text: "Il dit" }],
+	ranges: [{ from: 0, to: 6 }],
+});
+fixAll("---\na: b\n---\nx\n---\nc: d\n---", [{ from: 0, to: 12 }, { from: 15, to: 27 }], "seule la sélection en tête de note s'ouvre sur les métadonnées", {
+	changes: [{ from: 15, to: 27, text: `---\nc${NBSP}: d\n---` }],
+	ranges: [{ from: 0, to: 12 }, { from: 15, to: 28 }],
+});
 
 section("Règles par langue : correction");
 const typoIn = (code, input, expected, name) => check(`${code} : ${name}`, applyTypography(input, settings(), lang(code)), expected);
