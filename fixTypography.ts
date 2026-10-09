@@ -309,6 +309,11 @@ const ELISION =
 // Marque facultative collée au mot, qui n'appelle pas d'espace : chat(s), allié(e).
 const PLURAL_MARK = "(?:e|s|es|x|ée|ées|ne|nes)";
 
+// A hyphen preceded on its line by quote markers only is the bullet of a list
+// in a quote or a callout (`> - item`), not a hyphen between spaces. Needs the
+// `m` flag.
+const NOT_QUOTED_BULLET = `(?<!^${H}*(?:>${H}*)+)`;
+
 // Point coll\u00E9 entre deux phrases : \u00AB voir.C\u2019est \u00BB. Mot en minuscules, puis une
 // majuscule suivie d'une minuscule ou d'une apostrophe : \u00E9carte \u00AB file.md \u00BB,
 // \u00AB ASP.NET \u00BB, \u00AB U.S.A \u00BB et \u00AB Node.JS \u00BB.
@@ -387,7 +392,9 @@ function rulesFor(s: SmartTypographySettings, lang: Lang): TypoRule[] {
     rule(`([;!?]+)(?=${LETTER})`, "$1 ");
     rule(`(${LETTER})\\((?!${PLURAL_MARK}\\))`, "$1 (");
   }
-  if (o.dash) rule(`([^\\s|-]${H}+)-(?=${H}+[^\\s|-])`, `$1${DASHES[lang]}`);
+  if (o.dash) {
+    rule(`([^\\s|-]${H}+)${NOT_QUOTED_BULLET}-(?=${H}+[^\\s|-])`, `$1${DASHES[lang]}`, "gm");
+  }
 
   if (lang === "fr") {
     // Avant ; ! ? : les suites comme « ?! » n'en reçoivent qu'une seule, et un
@@ -580,7 +587,7 @@ const CHECKS: Check[] = [
   { mode: "space", opt: "general", side: "after", reason: "space", pattern: `(?<=${ELISION}['’])${H}+(?=${LETTER})` },
   { mode: "space", opt: "general", side: "before", reason: "space", pattern: `(?<=${LETTER})${H}+(?=['’]${H}+${LETTER})` },
   { mode: "space", opt: "general", side: "after", reason: "space", pattern: `(?<=${LETTER}${H}+['’])${H}+(?=${LETTER})` },
-  { mode: "sign", opt: "dash", side: "on", reason: "dash", pattern: `(?<=[^\\s|-]${H}+)-(?=${H}+[^\\s|-])` },
+  { mode: "sign", opt: "dash", side: "on", reason: "dash", flags: "gm", pattern: `(?<=[^\\s|-]${H}+)${NOT_QUOTED_BULLET}-(?=${H}+[^\\s|-])` },
   { mode: "sign", opt: "quotes", side: "on", reason: "quote", pattern: `["']` },
 
   // --- Hors du français : aucune espace avant ; : ! ?

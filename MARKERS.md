@@ -66,6 +66,7 @@ Details:
 - Elision is only recognised after `c d j l m n s t`, `qu`, `jusqu`, `lorsqu`, `puisqu` or `quoiqu`, so as not to mistake it for a single quotation mark (`said ‘yes’ to`).
 - Doubled spaces are not flagged in a table, after a bullet, a number, a checkbox or a `>` quote marker (alignment is intentional), nor before punctuation: that punctuation's own rule applies then. Two trailing spaces (a Markdown line break) are left alone, except after the end of a sentence.
 - An empty bullet (`1. `, `- `) does not end a sentence.
+- The bullet of a list in a quote or a callout (`> - item`) is not a hyphen between spaces.
 - Final punctuation is only checked on lines of prose: headings, list items, quotes and callouts, tables, separators (`***`), indented code, footnote and reference definitions, Dataview fields (`key:: value`) and lines of tags only are left alone, as are lines that end with a link, code or a comment, or are made of them only. A missing sign is never added by the fix command: only the author knows which one.
 - The end-of-line markers (useless space, missing final punctuation) only show on the line being typed 5 seconds after the last keystroke, so that they do not flicker while the sentence is being written.
 - Likewise, a fault right against the caret, with only spaces in between (`tu |.`, `va, |`), waits 5 seconds after the last keystroke, since the next one often fixes it. It shows at once when the caret moves away.

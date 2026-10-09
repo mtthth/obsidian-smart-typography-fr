@@ -173,6 +173,8 @@ universal("3,5 et 12.5 et a.md", "3,5 et 12.5 et a.md", "décimales et extension
 universal("Ah ... fin", "Ah … fin", "points de suspension épargnés");
 universal("mot - mot", "mot – mot", "trait d'union entre espaces → tiret");
 universal("- item\n| a | - |", "- item\n| a | - |", "puce et cellule de tableau épargnées");
+universal("> - un\n> [!note] Titre\n> - [ ] tâche\n> > - imbriqué", "> - un\n> [!note] Titre\n> - [ ] tâche\n> > - imbriqué", "puces d'une citation ou d'un callout épargnées");
+universal("> mot - mot", "> mot – mot", "trait d'union entre espaces dans une citation");
 const uni = (text, expected, name, ctx = FR, s = settings()) =>
 	check(name, findFaultySigns(text, s, ctx).map(({ pos, side, reason }) => [pos, side, reason]), expected);
 uni("bla bla ( attire .", [[8, "after", "space"], [17, "before", "space"]], "repères sur ( et .");
@@ -187,6 +189,8 @@ uni("voir `a ( b` et https://x.fr/?q='1'", [], "code et URL protégés");
 uni("`code` .", [], "espace collée à une portion protégée");
 uni("mot - mot", [[4, "on", "dash"]], "repère sur le trait d'union");
 uni("- item\n| a | - |", [], "puce et tableau sans repère");
+uni("> - un\n> [!note] Titre\n> - [ ] tâche", [], "puces d'une citation ou d'un callout sans repère");
+uni("> mot - mot", [[6, "on", "dash"]], "repère sur le trait d'union dans une citation");
 
 section("Espaces doublées");
 universal("Deux  espaces,   trois", "Deux espaces, trois", "espaces doublées réduites");
