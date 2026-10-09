@@ -114,14 +114,13 @@ function punctuationRules(
 }
 
 /* ------------------------------------------------------------------ */
-/* ;  !  ?  »   →  espace fine insécable devant                        */
+/* ;  !  ?   →  espace fine insécable devant                           */
 /* ------------------------------------------------------------------ */
 
 export const frenchStopRules: InputRule[] = [
   ...punctuationRules(";", fine),
   ...punctuationRules("!", fine),
   ...punctuationRules("?", fine),
-  ...punctuationRules("»", fine),
 ];
 
 /* ------------------------------------------------------------------ */
@@ -178,7 +177,8 @@ export const frenchPercentRules: InputRule[] = [
 /* Guillemets                                                          */
 /* ------------------------------------------------------------------ */
 
-// « tapé directement au clavier (AltGr, clavier fr, macOS…)
+// « et » tapés directement au clavier (AltGr, clavier fr, macOS…) : fine
+// après « et avant », sous le même réglage que la correction.
 export const frenchGuillemetRules: InputRule[] = [
   {
     trigger: "«",
@@ -186,6 +186,7 @@ export const frenchGuillemetRules: InputRule[] = [
     to: (s) => "«" + s.frNarrowSpace,
     contextMatch: ALWAYS,
   },
+  ...punctuationRules("»", fine),
 ];
 
 // << et >> quand l'option « Guillemets » du plugin est active.

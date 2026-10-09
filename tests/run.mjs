@@ -22,7 +22,7 @@ const { applyTypography, findFaultySigns, noteTypo, touchesCaret } = await impor
 const { detectLanguage, defaultLangOptions } = await import(pathToFileURL(path.join(out, "languages.mjs")).href);
 const { rewriteInput } = await import(pathToFileURL(path.join(out, "inputRewrite.mjs")).href);
 const { EditorSelection, EditorState } = await import("@codemirror/state");
-const { FINE, NBSP, THIN, frenchColonRules, frenchPercentRules, frenchStopRules } = await import(pathToFileURL(path.join(out, "frenchRules.mjs")).href);
+const { FINE, NBSP, THIN, frenchColonRules, frenchGuillemetRules, frenchPercentRules, frenchStopRules } = await import(pathToFileURL(path.join(out, "frenchRules.mjs")).href);
 const { dashRules, fractionRules, ruleApplies } = await import(pathToFileURL(path.join(out, "inputRules.mjs")).href);
 
 // Anciens interrupteurs français, traduits en réglages par langue.
@@ -356,6 +356,8 @@ typing(frenchColonRules, "| Nom | ", ":", "| Nom | :", "alignement d'une colonne
 typing(frenchColonRules, "a | ", ":", "a | :", "alignement d'un tableau sans bordure");
 typing(frenchColonRules, "12", ":", "12:", "heure épargnée");
 typing(frenchStopRules, "Quoi", "?", `Quoi${FINE}?`, "fine avant ? collé");
+typing(frenchGuillemetRules, "« mot ", "»", `« mot${FINE}»`, "fine avant » : réglage Guillemets");
+typing(frenchStopRules, "« mot ", "»", "« mot »", "» hors du réglage Avant ; ! ?");
 typing(frenchStopRules, "Un&nbsp", ";", "Un&nbsp;", "entité HTML nommée");
 typing(frenchStopRules, "x&#39", ";", "x&#39;", "entité HTML numérique");
 typing(frenchStopRules, "voir https://x.fr/page", "?", "voir https://x.fr/page?", "URL avec schéma");
