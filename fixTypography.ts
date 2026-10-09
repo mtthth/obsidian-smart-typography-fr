@@ -53,6 +53,8 @@ const PROTECTED_SOURCES = [
   "<[^>\\n]+>",
   "[a-z][a-z0-9+.-]*:\\/\\/\\S+",
   "www\\.\\S+",
+  // URL without a scheme: a domain followed by a path (example.com/page).
+  "(?<![\\w@.-])(?:[A-Za-z0-9-]+\\.)+[A-Za-z]{2,}\\/\\S*",
 ];
 const PROTECTED_SOURCE = [
   FRONTMATTER_SOURCE,

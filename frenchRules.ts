@@ -71,10 +71,16 @@ const URL_SCHEME =
   /(?:https?|s?ftps?|file|mailto|tel|data|obsidian|zotero|doi|imap|ssh|git|wss?|vscode)$/i;
 
 // On est à l'intérieur d'une URL : ni fine devant « ? », ni insécable ailleurs.
-// \S*$ ne franchit pas les espaces ni les retours à la ligne.
+// \S*$ ne franchit pas les espaces ni les retours à la ligne. Sans schéma,
+// une URL s'ouvre sur « www. » ou sur un domaine suivi d'un chemin
+// (« example.com/page »).
 const INSIDE_URI =
-  /(?:[a-z][a-z0-9+.-]*:\/\/|(?:https?|mailto|obsidian|zotero|file|tel|doi):)\S*$/i;
+  /(?:(?:[a-z][a-z0-9+.-]*:\/\/|(?:https?|mailto|obsidian|zotero|file|tel|doi):)|(?<![\w@.-])(?:www\.|(?:[a-z0-9-]+\.)+[a-z]{2,}\/))\S*$/i;
 const URI_LOOKBEHIND = 96;
+
+// Début d'une entité HTML : « &nbsp », « &#39 », dont le « ; » n'est pas une
+// ponctuation.
+const HTML_ENTITY = /&(?:[a-z][a-z0-9]*|#\d+|#x[0-9a-f]+)$/i;
 
 const fine = (s: SmartTypographySettings) => s.frNarrowSpace;
 
@@ -100,9 +106,9 @@ function punctuationRules(
       from: char,
       to: (s) => space(s) + char,
       contextMatch: AFTER_WORD,
-      // Épargne le « ? » d'une query string et compagnie.
+      // Épargne le « ? » d'une query string, le « ; » d'une entité HTML.
       contextLength: URI_LOOKBEHIND,
-      contextExclude: INSIDE_URI,
+      contextExclude: new RegExp(`${INSIDE_URI.source}|${HTML_ENTITY.source}`, "i"),
     },
   ];
 }
@@ -162,6 +168,9 @@ export const frenchPercentRules: InputRule[] = [
     from: "%",
     to: (s) => s.frNbSpace + "%",
     contextMatch: /\d$/,
+    // Pas dans une URL encodée : « fichier1%20 ».
+    contextLength: URI_LOOKBEHIND,
+    contextExclude: INSIDE_URI,
   },
 ];
 

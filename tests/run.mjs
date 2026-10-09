@@ -22,7 +22,7 @@ const { applyTypography, findFaultySigns, noteTypo, touchesCaret } = await impor
 const { detectLanguage, defaultLangOptions } = await import(pathToFileURL(path.join(out, "languages.mjs")).href);
 const { rewriteInput } = await import(pathToFileURL(path.join(out, "inputRewrite.mjs")).href);
 const { EditorSelection, EditorState } = await import("@codemirror/state");
-const { FINE, NBSP, THIN, frenchColonRules, frenchStopRules } = await import(pathToFileURL(path.join(out, "frenchRules.mjs")).href);
+const { FINE, NBSP, THIN, frenchColonRules, frenchPercentRules, frenchStopRules } = await import(pathToFileURL(path.join(out, "frenchRules.mjs")).href);
 const { dashRules, fractionRules, ruleApplies } = await import(pathToFileURL(path.join(out, "inputRules.mjs")).href);
 
 // Anciens interrupteurs français, traduits en réglages par langue.
@@ -90,6 +90,8 @@ unchanged("C:\\Users\\moi", "chemin Windows");
 unchanged("Bonjour :)", "émoticône");
 unchanged("Voir https://exemple.fr/?a=1&b=2;c=3", "URL avec ? ; et =");
 unchanged("www.exemple.fr/?x=1", "URL sans schéma");
+unchanged("Voir example.com/page?id=3;x ici", "domaine suivi d'un chemin");
+typo("Voir le site.Fin ;", `Voir le site. Fin${FINE};`, "point collé sans chemin : pas une URL");
 unchanged("Du `code ; ici` et voilà", "code en ligne");
 unchanged("```\nlet x = 1; // ok ?\n```", "bloc de code");
 unchanged("~~~\nif (a ; b) { x = \"y\" ; }\n~~~", "bloc de code à tildes");
@@ -353,6 +355,14 @@ typing(frenchColonRules, "| ", ":", "| :", "alignement d'une colonne de tableau"
 typing(frenchColonRules, "| Nom | ", ":", "| Nom | :", "alignement d'une colonne suivante");
 typing(frenchColonRules, "a | ", ":", "a | :", "alignement d'un tableau sans bordure");
 typing(frenchColonRules, "12", ":", "12:", "heure épargnée");
+typing(frenchStopRules, "Quoi", "?", `Quoi${FINE}?`, "fine avant ? collé");
+typing(frenchStopRules, "Un&nbsp", ";", "Un&nbsp;", "entité HTML nommée");
+typing(frenchStopRules, "x&#39", ";", "x&#39;", "entité HTML numérique");
+typing(frenchStopRules, "voir https://x.fr/page", "?", "voir https://x.fr/page?", "URL avec schéma");
+typing(frenchStopRules, "voir example.com/page", "?", "voir example.com/page?", "URL sans schéma");
+typing(frenchStopRules, "voir www.exemple.fr", "?", "voir www.exemple.fr?", "URL en www");
+typing(frenchPercentRules, "50", "%", `50${NBSP}%`, "insécable avant %");
+typing(frenchPercentRules, "https://x.org/fichier1", "%", "https://x.org/fichier1%", "% d'une URL encodée");
 typing(fractionRules, "le 1/", "2", "le ½", "fraction ½");
 typing(fractionRules, "le 1/1", "0", "le ⅒", "fraction ⅒");
 typing(fractionRules, "1/1", "0", "⅒", "fraction ⅒ en début de document");
