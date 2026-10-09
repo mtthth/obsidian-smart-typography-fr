@@ -72,14 +72,32 @@ export function visibleLineRanges(view: EditorView): TextRange[] {
 // Fin du bloc de métadonnées, lue sur le document entier : le motif de
 // protection est ancré sur le début du texte reçu, si bien qu'une fois le
 // « --- » ouvrant défilé hors de l'écran, plus rien ne distingue « clé: valeur »
-// d'une phrase.
+// d'une phrase. Un bloc qui ne se ferme pas dans le début de la note n'en est
+// pas un, comme pour noteTypoOf : inutile de parcourir toute la note.
 export function frontmatterEnd(state: EditorState): number {
   const doc = state.doc;
   if (doc.line(1).text.trimEnd() !== "---") return 0;
-  for (let n = 2; n <= doc.lines; n++) {
+  for (let n = 2; n <= doc.lines && doc.line(n).from < NOTE_HEAD; n++) {
     if (doc.line(n).text.trimEnd() === "---") return doc.line(n).to;
   }
   return 0;
+}
+
+// Réglage de la note pour un éditeur. Relire la langue dominante sur des
+// milliers de caractères à chaque touche coûte, et une frappe ne la change
+// guère : pendant la frappe (`fresh` faux), le dernier calcul sert tant que les
+// métadonnées, où se lit la propriété smart-typo, restent les mêmes.
+export function noteCache(defaultLang: () => Lang) {
+  let note: NoteTypo | null = null;
+  let head = "";
+  return (state: EditorState, fmEnd: number, fresh: boolean): NoteTypo => {
+    const current = state.doc.sliceString(0, fmEnd);
+    if (fresh || !note || current !== head) {
+      note = noteTypoOf(state, defaultLang());
+      head = current;
+    }
+    return note;
+  };
 }
 
 export function createSpacingMarkerPlugin(
@@ -95,15 +113,19 @@ export function createSpacingMarkerPlugin(
   // keystroke often fixes it.
   const LINE_END_DELAY = 5000;
 
-  const build = (view: EditorView, justEdited: boolean): DecorationSet => {
+  const build = (
+    view: EditorView,
+    justEdited: boolean,
+    noteOf: ReturnType<typeof noteCache>
+  ): DecorationSet => {
     const builder = new RangeSetBuilder<Decoration>();
     if (!isInScope(view.state)) return builder.finish();
 
     const settings = getSettings();
     const t = uiStrings(settings.uiLanguage);
-    const note = noteTypoOf(view.state, settings.defaultLanguage);
-    if (note.disabled) return builder.finish();
     const fmEnd = frontmatterEnd(view.state);
+    const note = noteOf(view.state, fmEnd, !justEdited);
+    if (note.disabled) return builder.finish();
     const caret = view.state.selection.main.head;
     const caretLine = justEdited ? view.state.doc.lineAt(caret) : null;
 
@@ -160,9 +182,10 @@ export function createSpacingMarkerPlugin(
     class {
       decorations: DecorationSet;
       timer: number | null = null;
+      noteOf = noteCache(() => getSettings().defaultLanguage);
 
       constructor(view: EditorView) {
-        this.decorations = build(view, false);
+        this.decorations = build(view, false, this.noteOf);
       }
 
       update(update: ViewUpdate) {
@@ -170,13 +193,13 @@ export function createSpacingMarkerPlugin(
           if (this.timer !== null) window.clearTimeout(this.timer);
           this.timer = window.setTimeout(() => {
             this.timer = null;
-            this.decorations = build(update.view, false);
+            this.decorations = build(update.view, false, this.noteOf);
             update.view.dispatch({});
           }, LINE_END_DELAY);
-          this.decorations = build(update.view, true);
+          this.decorations = build(update.view, true, this.noteOf);
         } else if (update.viewportChanged || (update.selectionSet && this.timer !== null)) {
           // A caret moved away no longer holds back the faults it touched.
-          this.decorations = build(update.view, this.timer !== null);
+          this.decorations = build(update.view, this.timer !== null, this.noteOf);
         }
       }
 

@@ -1,4 +1,4 @@
-// Tests des fonctions pures (fixTypography.ts, frenchRules.ts, inputRules.ts, inputRewrite.ts, languages.ts), sans Obsidian :
+// Tests des fonctions pures (fixTypography.ts, frenchRules.ts, inputRules.ts, inputRewrite.ts, languages.ts, spacingMarkers.ts), sans Obsidian :
 // TypeScript, déjà présent, transpile les modules, dont les imports « nus »
 // (baseUrl) sont réécrits en chemins relatifs.
 import ts from "typescript";
@@ -10,11 +10,11 @@ const root = path.resolve(import.meta.dirname, "..");
 const out = path.join(root, "tests", ".tmp");
 mkdirSync(out, { recursive: true });
 
-for (const name of ["fixTypography", "frenchRules", "inputRules", "inputRewrite", "languages"]) {
+for (const name of ["fixTypography", "frenchRules", "i18n", "inputRules", "inputRewrite", "languages", "spacingMarkers"]) {
 	const source = readFileSync(path.join(root, `${name}.ts`), "utf8");
 	const js = ts.transpileModule(source, {
 		compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 },
-	}).outputText.replace(/from "(frenchRules|fixTypography|inputRules|inputRewrite|languages)"/g, 'from "./$1.mjs"');
+	}).outputText.replace(/from "(frenchRules|fixTypography|i18n|inputRules|inputRewrite|languages|spacingMarkers)"/g, 'from "./$1.mjs"');
 	writeFileSync(path.join(out, `${name}.mjs`), js);
 }
 
@@ -22,6 +22,7 @@ const { applyTypography, findFaultySigns, fixRanges, noteTypo, touchesCaret } = 
 const { detectLanguage, defaultLangOptions } = await import(pathToFileURL(path.join(out, "languages.mjs")).href);
 const { revertField, rewriteInput, rewriteSpec } = await import(pathToFileURL(path.join(out, "inputRewrite.mjs")).href);
 const { EditorSelection, EditorState } = await import("@codemirror/state");
+const { frontmatterEnd, noteCache } = await import(pathToFileURL(path.join(out, "spacingMarkers.mjs")).href);
 const { FINE, NBSP, THIN, frenchColonRules, frenchGuillemetRules, frenchPercentRules, frenchStopRules } = await import(pathToFileURL(path.join(out, "frenchRules.mjs")).href);
 const { arrowRules, dashRules, dashRulesSansEnDash, fractionRules, ruleApplies } = await import(pathToFileURL(path.join(out, "inputRules.mjs")).href);
 
@@ -482,6 +483,19 @@ check("transaction sans changement : annulation gardée", revert(rewritten.updat
 check("texte modifié sans événement utilisateur (synchro) : annulation périmée",
 	revert(rewritten.update({ changes: { from: 0, insert: "Titre\n" } }).state), null);
 check("curseur déplacé : annulation périmée", revert(rewritten.update({ selection: EditorSelection.cursor(0) }).state), null);
+
+section("Repérage : réglage de la note");
+const stateOf = (doc) => EditorState.create({ doc });
+check("fin des métadonnées", frontmatterEnd(stateOf("---\na: b\n---\nTexte")), 12);
+check("métadonnées fermées au-delà du début de la note : ignorées",
+	frontmatterEnd(stateOf("---\n" + "x\n".repeat(30000) + "---\nTexte")), 0);
+const noteOf = noteCache(() => "fr");
+const french = noteOf(stateOf("Il a dit qu'il viendrait demain, mais il n'est pas venu."), 0, true);
+const englishDoc = stateOf("I don't know what to do with this, but it is fine.");
+check("pendant la frappe, le calcul précédent sert", noteOf(englishDoc, 0, false) === french, true);
+check("hors frappe, recalcul", noteOf(englishDoc, 0, true).fallback, "en");
+const disabledDoc = stateOf("---\nsmart-typo: false\n---\nTexte");
+check("métadonnées changées pendant la frappe : recalcul", noteOf(disabledDoc, frontmatterEnd(disabledDoc), false).disabled, true);
 
 if (failures.length === 0) {
 	console.log("\nTous les tests passent.");
