@@ -10,6 +10,11 @@ fork part du tag `1.0.18`, et le dépôt d'origine est déclaré comme remote
 
 ## Installation
 
+Demande Obsidian 1.4.4 ou plus récent (le menu de langue de la note écrit la
+propriété `smart-typo` par `processFrontMatter`), et sur iPhone ou iPad iOS 16.4
+ou plus récent, dont le moteur est le premier à reconnaître les expressions
+régulières dont le plugin se sert.
+
 ```powershell
 npm install
 .\deploy.ps1

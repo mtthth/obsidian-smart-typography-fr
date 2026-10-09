@@ -33,15 +33,6 @@ import {
   frenchPercentRules,
   frenchStopRules,
 } from "frenchRules";
-import {
-  LegacyInputRule,
-  legacyArrowRules,
-  legacyComparisonRules,
-  legacyDashRules,
-  legacyEllipsisRules,
-  legacyGuillemetRules,
-  legacySmartQuoteRules,
-} from "legacyInputRules";
 import { Extension } from "@codemirror/state";
 import { TYPO_KEY, fixRanges, noteTypo } from "fixTypography";
 import { createSpacingMarkerPlugin, noteTypoOf } from "spacingMarkers";
@@ -109,8 +100,6 @@ export default class SmartTypography extends Plugin {
   inputRules: InputRule[];
   inputRuleMap: Record<string, InputRule[]>;
 
-  legacyInputRules: LegacyInputRule[];
-  legacyLastUpdate: WeakMap<CodeMirror.Editor, LegacyInputRule>;
   scopeFolders: string[] = [];
   // Règles de saisie françaises : elles ne jouent que sur une ligne reconnue
   // comme française.
@@ -126,7 +115,6 @@ export default class SmartTypography extends Plugin {
   }
 
   buildInputRules() {
-    this.legacyInputRules = [];
     this.inputRules = [];
     this.inputRuleMap = {};
     this.frenchInputRules = new Set([
@@ -166,32 +154,26 @@ export default class SmartTypography extends Plugin {
         this.inputRules.push(...dashRules);
       }
 
-      this.legacyInputRules.push(...legacyDashRules);
     }
 
     if (this.settings.ellipsis) {
       this.inputRules.push(...ellipsisRules);
-      this.legacyInputRules.push(...legacyEllipsisRules);
     }
 
     if (this.settings.curlyQuotes) {
       this.inputRules.push(...smartQuoteRules);
-      this.legacyInputRules.push(...legacySmartQuoteRules);
     }
 
     if (this.settings.arrows) {
       this.inputRules.push(...arrowRules);
-      this.legacyInputRules.push(...legacyArrowRules);
     }
 
     if (this.settings.guillemets) {
       this.inputRules.push(...guillemetRules);
-      this.legacyInputRules.push(...legacyGuillemetRules);
     }
 
     if (this.settings.comparisons) {
       this.inputRules.push(...comparisonRules);
-      this.legacyInputRules.push(...legacyComparisonRules);
     }
 
     if (this.settings.fractions) {
@@ -426,94 +408,7 @@ export default class SmartTypography extends Plugin {
         return tr;
       }),
     ]);
-
-    // Codemirror 5
-    this.legacyLastUpdate = new WeakMap();
-    this.registerCodeMirror((cm: CodeMirror.Editor) => {
-      cm.on("beforeChange", this.beforeChangeHandler);
-    });
   }
-
-  onunload() {
-    this.legacyLastUpdate = null;
-    this.app.workspace.iterateCodeMirrors((cm) => {
-      cm.off("beforeChange", this.beforeChangeHandler);
-    });
-  }
-
-  beforeChangeHandler = (
-    instance: CodeMirror.Editor,
-    delta: CodeMirror.EditorChangeCancellable
-  ) => {
-    if (!this.isPathInScope(this.currentFilePath())) return;
-
-    if (this.legacyLastUpdate.has(instance) && delta.origin === "+delete") {
-      const revert = this.legacyLastUpdate.get(instance).performRevert;
-
-      if (revert) {
-        revert(instance, delta, this.settings);
-        this.legacyLastUpdate.delete(instance);
-      }
-      return;
-    }
-
-    if (delta.origin === undefined && delta.text.length === 1) {
-      const input = delta.text[0];
-
-      for (let rule of this.legacyInputRules) {
-        if (!(rule.matchTrigger instanceof RegExp)) {
-          continue;
-        }
-
-        if (rule.matchTrigger.test(input)) {
-          rule.performUpdate(instance, delta, this.settings);
-          return;
-        }
-      }
-
-      return;
-    }
-
-    if (delta.origin === "+input" && delta.text.length === 1) {
-      const input = delta.text[0];
-      const rules = this.legacyInputRules.filter((r) => {
-        return typeof r.matchTrigger === "string" && r.matchTrigger === input;
-      });
-
-      if (rules.length === 0) {
-        if (this.legacyLastUpdate.has(instance)) {
-          this.legacyLastUpdate.delete(instance);
-        }
-        return;
-      }
-
-      let str = input;
-
-      if (delta.to.ch > 0) {
-        str = `${instance.getRange(
-          { line: delta.to.line, ch: 0 },
-          delta.to
-        )}${str}`;
-      }
-
-      for (let rule of rules) {
-        if (rule.matchRegExp && rule.matchRegExp.test(str)) {
-          if (
-            shouldCheckTextAtPos(instance, delta.from) &&
-            shouldCheckTextAtPos(instance, delta.to)
-          ) {
-            this.legacyLastUpdate.set(instance, rule);
-            rule.performUpdate(instance, delta, this.settings);
-          }
-          return;
-        }
-      }
-    }
-
-    if (this.legacyLastUpdate.has(instance)) {
-      this.legacyLastUpdate.delete(instance);
-    }
-  };
 
   async loadSettings() {
     const data = (await this.loadData()) ?? {};
@@ -988,29 +883,6 @@ class SmartTypographySettingTab extends PluginSettingTab {
 
 const ignoreListRegEx = /frontmatter|code|math|templater|hashtag/;
 
-function shouldCheckTextAtPos(
-  instance: CodeMirror.Editor,
-  pos: CodeMirror.Position
-) {
-  // Empty line
-  if (!instance.getLine(pos.line)) {
-    return true;
-  }
-
-  const tokens = instance.getTokenTypeAt(pos);
-
-  // Plain text line
-  if (!tokens) {
-    return true;
-  }
-
-  // Not codeblock or frontmatter
-  if (!ignoreListRegEx.test(tokens)) {
-    return true;
-  }
-
-  return false;
-}
 
 type TypoChoice = { value: Lang | false | null; label: string };
 

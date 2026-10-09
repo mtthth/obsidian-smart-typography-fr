@@ -8,6 +8,8 @@ The plugin's interface (settings, commands, notices) is in French.
 
 ## Installation
 
+Requires Obsidian 1.4.4 or later (the note language menu writes the `smart-typo` property through `processFrontMatter`), and on iPhone or iPad iOS 16.4 or later, whose browser engine first supports the regular expressions the plugin relies on.
+
 ```powershell
 npm install
 .\deploy.ps1
