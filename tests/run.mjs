@@ -21,7 +21,7 @@ for (const name of ["fixTypography", "frenchRules", "inputRules", "languages"]) 
 const { applyTypography, findFaultySigns, noteTypo, touchesCaret } = await import(pathToFileURL(path.join(out, "fixTypography.mjs")).href);
 const { detectLanguage, defaultLangOptions } = await import(pathToFileURL(path.join(out, "languages.mjs")).href);
 const { FINE, NBSP, THIN, frenchColonRules } = await import(pathToFileURL(path.join(out, "frenchRules.mjs")).href);
-const { ruleApplies } = await import(pathToFileURL(path.join(out, "inputRules.mjs")).href);
+const { fractionRules, ruleApplies } = await import(pathToFileURL(path.join(out, "inputRules.mjs")).href);
 
 // Anciens interrupteurs français, traduits en réglages par langue.
 const settings = (over = {}) => {
@@ -340,6 +340,13 @@ typing(frenchColonRules, "| ", ":", "| :", "alignement d'une colonne de tableau"
 typing(frenchColonRules, "| Nom | ", ":", "| Nom | :", "alignement d'une colonne suivante");
 typing(frenchColonRules, "a | ", ":", "a | :", "alignement d'un tableau sans bordure");
 typing(frenchColonRules, "12", ":", "12:", "heure épargnée");
+typing(fractionRules, "le 1/", "2", "le ½", "fraction ½");
+typing(fractionRules, "le 1/1", "0", "le ⅒", "fraction ⅒");
+typing(fractionRules, "1/1", "0", "⅒", "fraction ⅒ en début de document");
+typing(fractionRules, "ligne\n1/1", "0", "ligne\n⅒", "fraction ⅒ en début de ligne");
+typing(fractionRules, "le 01/1", "0", "le 01/10", "date 01/10 épargnée");
+typing(fractionRules, "21/1", "0", "21/10", "21/10 épargné");
+typing(fractionRules, "le 11/", "2", "le 11/2", "11/2 épargné");
 
 if (failures.length === 0) {
 	console.log("\nTous les tests passent.");

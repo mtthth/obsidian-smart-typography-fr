@@ -284,5 +284,7 @@ export const fractionRules: InputRule[] = [
     from: "1/10",
     to: "⅒",
     contextMatch: /(?:^|\s)1\/1$/,
+    // Sur 3 caracteres, « 1/1 » remplirait la fenetre : « 01/10 » deviendrait « 0⅒ ».
+    contextLength: 4,
   },
 ];
