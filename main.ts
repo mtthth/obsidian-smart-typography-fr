@@ -215,6 +215,12 @@ export default class SmartTypography extends Plugin {
     return active ? active.path : null;
   }
 
+  // Obsidian's "Strict line breaks" setting: two trailing spaces are then the
+  // only way to break a line. getConfig is not part of the public API.
+  strictLineBreaks(): boolean {
+    return (this.app.vault as any).getConfig?.("strictLineBreaks") === true;
+  }
+
   // Réglage de la note : langue imposée, false (non vérifiée) ou null.
   noteSetting(file: TFile): Lang | false | null {
     const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
@@ -457,7 +463,7 @@ export default class SmartTypography extends Plugin {
 
     const doc = editor.getValue();
     const note = noteTypo(doc, this.settings.defaultLanguage);
-    const fixed = fixRanges(doc, ranges, this.settings, note);
+    const fixed = fixRanges(doc, ranges, this.settings, note, this.strictLineBreaks());
     if (!fixed) {
       new Notice(this.t.nothingToFix);
       return;
@@ -489,7 +495,8 @@ export default class SmartTypography extends Plugin {
       this.markerExtensions.push(
         createSpacingMarkerPlugin(
           () => this.settings,
-          (state) => this.isPathInScope(this.currentFilePath(state))
+          (state) => this.isPathInScope(this.currentFilePath(state)),
+          () => this.strictLineBreaks()
         )
       );
     }

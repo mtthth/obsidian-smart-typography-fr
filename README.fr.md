@@ -173,7 +173,7 @@ laquelle, et la langue retenue pour la ligne.
 | `(` collée au mot qui précède | `enfin(frf)` | `enfin (frf)` (hors `chat(s)`, `allié(e)`) |
 | `;` `!` `?` collé à la lettre suivante | `fin;suite` | `fin; suite` |
 | élision avec espace | `l’ obscurité`, `l ’obscurité` | `l’obscurité` |
-| espace inutile en bout de ligne : une ou plusieurs après une fin de phrase, une seule après tout autre signe | `Fin. `, `A, ` | `Fin.`, `A,` (le repère attend 5 s sur la ligne en cours de frappe) |
+| espace inutile en bout de ligne : une ou plusieurs après une fin de phrase (une seule quand le réglage « Strict line breaks » de l'éditeur d'Obsidian est actif, deux espaces faisant alors le saut de ligne), une seule après tout autre signe | `Fin. `, `A, ` | `Fin.`, `A,` (le repère attend 5 s sur la ligne en cours de frappe) |
 | ligne de prose sans ponctuation finale (`. ! ? … : — –` ou guillemet fermant) | `Il part`, `Il part,` | signalée seulement, jamais corrigée (le repère attend 5 s sur la ligne en cours de frappe) |
 | espaces seules sur une ligne vide | `   ` | ligne vide |
 
@@ -194,7 +194,7 @@ Les décimales (`3,5`), extensions (`a.md`), points de suspension, émoticônes
 protégées ne sont pas signalés. Les espaces doublées sont permises dans les
 tableaux (lignes qui commencent par `|`, ou bloc sans bordure qui contient une
 ligne `---|---`), dans l'indentation, après une puce, un numéro ou un `>`, et
-en fin de ligne (après une fin de phrase, elles sont en revanche signalées, et une espace seule l'est toujours), où deux espaces forcent un retour à la ligne. En français, une
+en fin de ligne (après une fin de phrase, elles sont en revanche signalées, sauf si le réglage « Strict line breaks » de l'éditeur d'Obsidian est actif, et une espace seule l'est toujours), où deux espaces forcent un retour à la ligne. En français, une
 insécable déjà présente n'est jamais signalée ; une espace ordinaire qui la
 côtoie l'est. Chaque famille de règles se coupe langue par langue dans les
 réglages (voir [Réglages par langue](#réglages-ajoutés)). Le détail de tous les

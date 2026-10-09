@@ -273,6 +273,16 @@ typo("A, \nB.", "A,\nB.", "trailing space after a comma removed");
 unchanged("A,  \nB.", "Markdown line break kept");
 check("selection ending mid-line keeps its last space", applyTypography("Il dit ", settings(), FR, true, false), "Il dit ");
 check("selection ending a line loses it", applyTypography("Il dit ", settings(), FR), "Il dit");
+// Obsidian's "Strict line breaks": two trailing spaces are the only line break.
+const strict = (text) => applyTypography(text, settings(), FR, true, true, true);
+check("strict line breaks: two spaces after a sentence kept", strict("Fin.  \nsuite"), "Fin.  \nsuite");
+check("strict line breaks: a single space still removed", strict("Fin. \nA, \nsuite"), "Fin.\nA,\nsuite");
+check("strict line breaks: line break after a sentence not flagged",
+	findFaultySigns("Fin.  \nB.", withEnding, FR, false, true).map(({ reason }) => reason), []);
+check("strict line breaks: single trailing space flagged",
+	findFaultySigns("Fin. \nB.", withEnding, FR, false, true).map(({ pos, reason }) => [pos, reason]), [[4, "line-end"]]);
+check("strict line breaks reach each selection",
+	fixRanges("Fin.  \nQuoi ?", [{ from: 0, to: 13 }], settings(), FR, true)?.changes.map(({ text }) => text), [`Fin.  \nQuoi${FINE}?`]);
 
 section("Plusieurs sélections");
 const fixAll = (doc, ranges, name, expected) => check(name, fixRanges(doc, ranges, settings(), FR), expected);

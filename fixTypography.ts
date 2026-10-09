@@ -238,16 +238,21 @@ function doubleSpaces(text: string, spans: [number, number][]): [number, number]
 // or more there are a Markdown line break, and are kept.
 const EDGE_SPACE_SOURCE =
   "^[ \\t]+(?=\\r?$)|(?<=[.!?…»”])[ \\t]+(?=\\r?$)|(?<=[^\\s.!?…»”])[ \\t](?=\\r?$)";
+// With Obsidian's "Strict line breaks" on, a single line break joins the
+// lines: two spaces are then the only way to break one, after the end of a
+// sentence too. Only a single trailing space is useless.
+const STRICT_EDGE_SPACE_SOURCE = "^[ \\t]+(?=\\r?$)|(?<=\\S)[ \\t](?=\\r?$)";
 
 type EdgeKind = "blank-line" | "line-end";
 
 function edgeSpaces(
   text: string,
-  spans: [number, number][]
+  spans: [number, number][],
+  strictLineBreaks: boolean
 ): { start: number; end: number; kind: EdgeKind }[] {
   const starts = lineStarts(text);
   const found: { start: number; end: number; kind: EdgeKind }[] = [];
-  const re = new RegExp(EDGE_SPACE_SOURCE, "gm");
+  const re = new RegExp(strictLineBreaks ? STRICT_EDGE_SPACE_SOURCE : EDGE_SPACE_SOURCE, "gm");
   let match: RegExpExecArray | null;
   while ((match = re.exec(text)) !== null) {
     const start = match.index;
@@ -481,13 +486,15 @@ function rulesFor(s: SmartTypographySettings, lang: Lang): TypoRule[] {
 // Corrige le texte, hors des zones protégées, selon la langue de chaque ligne.
 // `atDocStart` : le texte commence le document (voir protectedRanges).
 // `endsLine`: the text stops at the end of a line. Otherwise spaces at its very
-// end separate it from what follows, and are kept.
+// end separate it from what follows, and are kept. `strictLineBreaks`:
+// Obsidian's setting of that name (see STRICT_EDGE_SPACE_SOURCE).
 export function applyTypography(
   text: string,
   s: SmartTypographySettings,
   ctx: LangContext,
   atDocStart = true,
-  endsLine = true
+  endsLine = true,
+  strictLineBreaks = false
 ): string {
   const outer = protectedRanges(text, atDocStart);
   const langAt0 = languageResolver(text, outer, ctx);
@@ -497,7 +504,7 @@ export function applyTypography(
   };
   const edits = [
     ...doubleSpaces(text, outer).map(([start, end]) => ({ start, end, repl: " " })),
-    ...edgeSpaces(text, outer)
+    ...edgeSpaces(text, outer, strictLineBreaks)
       .filter(({ end }) => endsLine || end < text.length)
       .map(({ start, end }) => ({ start, end, repl: "" })),
   ]
@@ -560,7 +567,8 @@ export function fixRanges(
   doc: string,
   ranges: TextRange[],
   s: SmartTypographySettings,
-  ctx: LangContext
+  ctx: LangContext,
+  strictLineBreaks = false
 ): { changes: (TextRange & { text: string })[]; ranges: TextRange[] } | null {
   const changes: (TextRange & { text: string })[] = [];
   const fixed: TextRange[] = [];
@@ -568,7 +576,7 @@ export function fixRanges(
   for (const { from, to } of [...ranges].sort((a, b) => a.from - b.from)) {
     const text = doc.slice(from, to);
     const endsLine = to === doc.length || doc[to] === "\n" || doc[to] === "\r";
-    const corrected = applyTypography(text, s, ctx, from === 0, endsLine);
+    const corrected = applyTypography(text, s, ctx, from === 0, endsLine, strictLineBreaks);
     if (corrected !== text) changes.push({ from, to, text: corrected });
     fixed.push({ from: from + shift, to: from + shift + corrected.length });
     shift += corrected.length - text.length;
@@ -676,12 +684,13 @@ const CHECKS: Check[] = [
 // la langue de sa ligne. Le repère se pose sur le signe : jamais de la syntaxe
 // que l'aperçu en direct masque, contrairement au caractère qui le précède
 // parfois (**Note**:). `atDocStart` : le texte commence le document (voir
-// protectedRanges).
+// protectedRanges). `strictLineBreaks` : voir applyTypography.
 export function findFaultySigns(
   text: string,
   s: SmartTypographySettings,
   ctx: LangContext,
-  atDocStart = true
+  atDocStart = true,
+  strictLineBreaks = false
 ): FaultySign[] {
   const spans = protectedRanges(text, atDocStart);
   const langAt = languageResolver(text, spans, ctx);
@@ -735,7 +744,7 @@ export function findFaultySigns(
     signs.set(`${pos}:on`, { pos, side: "on", reason: "double-space", lang: langAt(pos) });
   }
 
-  for (const { start, kind } of edgeSpaces(text, spans)) {
+  for (const { start, kind } of edgeSpaces(text, spans, strictLineBreaks)) {
     if (!generalAt(start)) continue;
     signs.set(`${start}:on`, { pos: start, side: "on", reason: kind, lang: langAt(start) });
   }

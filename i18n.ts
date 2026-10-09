@@ -198,7 +198,7 @@ const en: UiStrings = {
       case "ending":
         return {
           name: "Final punctuation",
-          desc: "Flags a line of prose that does not end with . ! ? … : — – or a closing quote (» ”). Headings, lists, quotes, tables and code are left alone. Turn it off for verse.",
+          desc: "Flags a line of prose that does not end with . ! ? … : — – or a closing quote (» ”). Headings, lists, quotes, tables and code are left alone. Turn it off for verse, or if you break sentences over several lines.",
         };
       case "punctuation":
         return {
@@ -401,7 +401,7 @@ const fr: UiStrings = {
       case "ending":
         return {
           name: "Ponctuation finale",
-          desc: "Signale une ligne de prose qui ne finit pas par . ! ? … : — – ou un guillemet fermant (» ”). Titres, listes, citations, tableaux et code sont épargnés. À désactiver pour des vers.",
+          desc: "Signale une ligne de prose qui ne finit pas par . ! ? … : — – ou un guillemet fermant (» ”). Titres, listes, citations, tableaux et code sont épargnés. À désactiver pour des vers, ou si vous coupez vos phrases sur plusieurs lignes.",
         };
       case "punctuation":
         return {

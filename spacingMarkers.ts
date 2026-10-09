@@ -84,7 +84,9 @@ export function frontmatterEnd(state: EditorState): number {
 
 export function createSpacingMarkerPlugin(
   getSettings: () => SmartTypographySettings,
-  isInScope: (state: EditorState) => boolean
+  isInScope: (state: EditorState) => boolean,
+  // Obsidian's "Strict line breaks" setting, read on each build.
+  strictLineBreaks: () => boolean
 ) {
   // Une espace tapée après un point est le plus souvent suivie d'un mot : le
   // repère de fin de ligne n'apparaît donc que 5 s après la dernière frappe.
@@ -117,7 +119,8 @@ export function createSpacingMarkerPlugin(
         text,
         settings,
         note,
-        false
+        false,
+        strictLineBreaks()
       )) {
         if (
           (reason === "line-end" || reason === "no-ending") &&
