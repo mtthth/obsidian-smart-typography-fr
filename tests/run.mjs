@@ -1,4 +1,4 @@
-// Tests des fonctions pures (fixTypography.ts, frenchRules.ts, inputRules.ts, languages.ts), sans Obsidian :
+// Tests des fonctions pures (fixTypography.ts, frenchRules.ts, inputRules.ts, inputRewrite.ts, languages.ts), sans Obsidian :
 // TypeScript, déjà présent, transpile les modules, dont les imports « nus »
 // (baseUrl) sont réécrits en chemins relatifs.
 import ts from "typescript";
@@ -10,18 +10,20 @@ const root = path.resolve(import.meta.dirname, "..");
 const out = path.join(root, "tests", ".tmp");
 mkdirSync(out, { recursive: true });
 
-for (const name of ["fixTypography", "frenchRules", "inputRules", "languages"]) {
+for (const name of ["fixTypography", "frenchRules", "inputRules", "inputRewrite", "languages"]) {
 	const source = readFileSync(path.join(root, `${name}.ts`), "utf8");
 	const js = ts.transpileModule(source, {
 		compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 },
-	}).outputText.replace(/from "(frenchRules|fixTypography|inputRules|languages)"/g, 'from "./$1.mjs"');
+	}).outputText.replace(/from "(frenchRules|fixTypography|inputRules|inputRewrite|languages)"/g, 'from "./$1.mjs"');
 	writeFileSync(path.join(out, `${name}.mjs`), js);
 }
 
 const { applyTypography, findFaultySigns, noteTypo, touchesCaret } = await import(pathToFileURL(path.join(out, "fixTypography.mjs")).href);
 const { detectLanguage, defaultLangOptions } = await import(pathToFileURL(path.join(out, "languages.mjs")).href);
-const { FINE, NBSP, THIN, frenchColonRules } = await import(pathToFileURL(path.join(out, "frenchRules.mjs")).href);
-const { fractionRules, ruleApplies } = await import(pathToFileURL(path.join(out, "inputRules.mjs")).href);
+const { rewriteInput } = await import(pathToFileURL(path.join(out, "inputRewrite.mjs")).href);
+const { EditorSelection, EditorState } = await import("@codemirror/state");
+const { FINE, NBSP, THIN, frenchColonRules, frenchStopRules } = await import(pathToFileURL(path.join(out, "frenchRules.mjs")).href);
+const { dashRules, fractionRules, ruleApplies } = await import(pathToFileURL(path.join(out, "inputRules.mjs")).href);
 
 // Anciens interrupteurs français, traduits en réglages par langue.
 const settings = (over = {}) => {
@@ -347,6 +349,55 @@ typing(fractionRules, "ligne\n1/1", "0", "ligne\n⅒", "fraction ⅒ en début d
 typing(fractionRules, "le 01/1", "0", "le 01/10", "date 01/10 épargnée");
 typing(fractionRules, "21/1", "0", "21/10", "21/10 épargné");
 typing(fractionRules, "le 11/", "2", "le 11/2", "11/2 épargné");
+
+section("Saisie à plusieurs curseurs");
+// Frappe de `char` à chaque curseur, réécrite par rewriteInput comme dans
+// main.ts. Dans `doc`, « | » marque un curseur et « [ » « ] » une sélection.
+// Donne le texte et ses curseurs, puis le texte rétabli par le retour arrière.
+const typeAt = (rules, doc, char) => {
+	const ranges = [];
+	let text = "";
+	let anchor = null;
+	for (const c of doc) {
+		if (c === "|") ranges.push(EditorSelection.cursor(text.length));
+		else if (c === "[") anchor = text.length;
+		else if (c === "]") ranges.push(EditorSelection.range(anchor, text.length));
+		else text += c;
+	}
+	const state = EditorState.create({
+		doc: text,
+		selection: EditorSelection.create(ranges),
+		extensions: EditorState.allowMultipleSelections.of(true),
+	});
+	const tr = state.update({ ...state.replaceSelection(char), userEvent: "input.type" });
+	const rewrite = rewriteInput(tr, (fromA, fromB, inserted) => {
+		const rule = rules.find((r) => r.trigger === inserted && ruleApplies(r, (n) => tr.newDoc.sliceString(Math.max(0, fromB - n), fromB)));
+		return rule ? { rule, insert: typeof rule.to === "string" ? rule.to : rule.to(settings()) } : null;
+	});
+	if (!rewrite) return null;
+	const marked = (s) =>
+		s.selection.ranges.reduceRight((out, r) => out.slice(0, r.head) + "|" + out.slice(r.head), s.doc.toString());
+	const after = state.update({ changes: rewrite.changes, selection: rewrite.selection }).state;
+	const reverted = after.update({ changes: rewrite.reverts, selection: tr.newSelection }).state;
+	return [marked(after), marked(reverted)];
+};
+const typingAt = (rules, doc, char, expected, name) => {
+	let actual;
+	try {
+		actual = typeAt(rules, doc, char);
+	} catch (e) {
+		actual = String(e);
+	}
+	check(name, actual, expected);
+};
+typingAt(dashRules, "a-|", "-", ["a–|", "a--|"], "un curseur");
+typingAt(dashRules, "a-|\nb|c", "-", ["a–|\nb-|c", "a--|\nb-|c"], "le curseur sans règle tape quand même");
+typingAt(dashRules, "a-|\nb|", "-", ["a–|\nb-|", "a--|\nb-|"], "dernier curseur en fin de document");
+typingAt(dashRules, "a-|\nb-|", "-", ["a–|\nb–|", "a--|\nb--|"], "deux réécritures, curseurs et retour arrière à leur place");
+typingAt(dashRules, "x|y a-|", "-", ["x-|y a–|", "x-|y a--|"], "un curseur avant la réécriture ne bouge pas");
+typingAt(dashRules, "a-[xyz]", "-", ["a–|", "a--|"], "la sélection remplacée par la frappe est effacée");
+typingAt(frenchStopRules, "Quoi |\nEt|", "?", [`Quoi${FINE}?|\nEt${FINE}?|`, "Quoi ?|\nEt?|"], "règles françaises, retour arrière au texte tapé");
+check("aucune règle : la frappe reste telle quelle", typeAt(dashRules, "a|\nb|", "-"), null);
 
 if (failures.length === 0) {
 	console.log("\nTous les tests passent.");

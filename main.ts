@@ -10,8 +10,6 @@ import {
 } from "obsidian";
 import * as obsidianApi from "obsidian";
 import {
-  ChangeSpec,
-  EditorSelection,
   EditorState,
   StateEffect,
   StateField,
@@ -52,6 +50,7 @@ import {
 import { Extension } from "@codemirror/state";
 import { TYPO_KEY, applyTypography, noteTypo } from "fixTypography";
 import { createSpacingMarkerPlugin, noteTypoOf } from "spacingMarkers";
+import { rewriteInput } from "inputRewrite";
 import {
   LANGS,
   Lang,
@@ -395,17 +394,7 @@ export default class SmartTypography extends Plugin {
           return seenPositions[pos];
         };
 
-        // Store a list of changes and specs to revert these changes
-        const changes: ChangeSpec[] = [];
-        const reverts: ChangeSpec[] = [];
-
-        const registerChange = (change: ChangeSpec, revert: ChangeSpec) => {
-          changes.push(change);
-          reverts.push(revert);
-        };
-
         const contextCache: Record<string, string> = {};
-        let newSelection = tr.selection;
 
         // Langue de la ligne où l'on tape, calculée seulement si une règle
         // française est en jeu.
@@ -419,12 +408,11 @@ export default class SmartTypography extends Plugin {
           return detectLanguage(line) ?? note.fallback;
         };
 
-        tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
-          const insertedText = inserted.sliceString(0, 0 + inserted.length);
-          const matchedRules = this.inputRuleMap[insertedText];
+        const ruleAt = (fromA: number, fromB: number, inserted: string) => {
+          const matchedRules = this.inputRuleMap[inserted];
 
           if (!matchedRules) {
-            return;
+            return null;
           }
 
           // Fenetre de contexte en amont du caractere insere.
@@ -441,7 +429,7 @@ export default class SmartTypography extends Plugin {
 
           for (let rule of matchedRules) {
             // If we're in a codeblock, etc, return early, no need to continue checking
-            if (!canPerformReplacement(fromA)) return;
+            if (!canPerformReplacement(fromA)) return null;
 
             if (
               this.frenchInputRules.has(rule) &&
@@ -456,56 +444,26 @@ export default class SmartTypography extends Plugin {
 
             const insert =
               typeof rule.to === "string" ? rule.to : rule.to(this.settings);
-            const replacementLength = rule.from.length - rule.trigger.length;
-            const insertionPoint = fromA - replacementLength;
-            const reversionPoint = fromB - replacementLength;
-            // Le retour arrière rétablit le texte réellement remplacé, et non
-            // rule.from : les garde-fous français y écrivent une fine U+202F,
-            // alors que l'espace en place suit le réglage (U+00A0, U+2009…).
-            const original =
-              tr.startState.doc.sliceString(insertionPoint, fromA) + insertedText;
-
-            registerChange(
-              {
-                from: insertionPoint,
-                to: insertionPoint + replacementLength,
-                insert,
-              },
-              {
-                from: reversionPoint,
-                to: reversionPoint + insert.length,
-                insert: original,
-              }
-            );
-
-            const selectionAdjustment = rule.from.length - insert.length;
-
-            newSelection = EditorSelection.create(
-              newSelection.ranges.map((r) =>
-                EditorSelection.range(
-                  r.anchor - selectionAdjustment,
-                  r.head - selectionAdjustment
-                )
-              )
-            );
-
-            return;
+            return { rule, insert };
           }
-        }, false);
+          return null;
+        };
 
-        // If we have any changes, construct a transaction spec
-        if (changes.length) {
+        // If any rule applies, construct a transaction spec, with what
+        // reverts it on backspace
+        const rewrite = rewriteInput(tr, ruleAt);
+        if (rewrite) {
           return [
             {
               effects: storeTransaction.of({
                 effects: storeTransaction.of(null),
-                selection: tr.selection,
+                selection: tr.newSelection,
                 scrollIntoView: tr.scrollIntoView,
-                changes: reverts,
+                changes: rewrite.reverts,
               }),
-              selection: newSelection,
+              selection: rewrite.selection,
               scrollIntoView: tr.scrollIntoView,
-              changes,
+              changes: rewrite.changes,
             },
           ];
         }
