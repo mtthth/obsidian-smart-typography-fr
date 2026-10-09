@@ -24,6 +24,12 @@ export function ruleApplies(
 }
 
 // Dashes
+
+// Pas de tiret dans un commentaire HTML ouvert (« <!-- … --> »), ni dans la
+// ligne de separation d'un tableau (« | :--- »).
+const DASH_EXCLUDE = /<!-$|<!--(?:(?!-->)[\s\S])*-$|\|[ \t]*:?-+$/;
+const DASH_LOOKBEHIND = 200;
+
 export const dashRules: InputRule[] = [
   // en dash
   {
@@ -31,6 +37,8 @@ export const dashRules: InputRule[] = [
     from: "--",
     to: "–",
     contextMatch: /-$/,
+    contextLength: DASH_LOOKBEHIND,
+    contextExclude: DASH_EXCLUDE,
   },
   // em dash
   {
@@ -55,6 +63,8 @@ export const dashRulesSansEnDash: InputRule[] = [
     from: "--",
     to: "—",
     contextMatch: /-$/,
+    contextLength: DASH_LOOKBEHIND,
+    contextExclude: DASH_EXCLUDE,
   },
   // tripple dash
   {
@@ -134,6 +144,8 @@ export const arrowRules: InputRule[] = [
     from: "->",
     to: (settings) => settings.rightArrow,
     contextMatch: /-$/,
+    // « --> » ferme un commentaire HTML.
+    contextExclude: /--$/,
   },
 ];
 

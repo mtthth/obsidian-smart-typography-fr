@@ -141,7 +141,8 @@ It is purely visual, the text is never modified, and the fix command sorts out w
 
 - **Typing rules do not apply to text already written**: for that, use the selection fix command.
 - Dataview: `field:: value` gets a non-breaking space on the first `:` and breaks the field. Turn the colon option off if you use them.
-- URLs without a scheme (`www.exemple.fr/x?y=1`): the `?` gets a narrow space.
+- A URL without a scheme is only recognised from `www.` or from a domain followed by a path (`exemple.fr/x?y=1`): `exemple.fr?y=1` still gets a narrow space.
+- At the start of a line, `---` gives an em dash, for dialogue; a fourth `-` gives back `---` (front matter, horizontal rule, borderless table). Dashes are left alone in an HTML comment (`<!-- … -->`) and after a table's `|`.
 - Scope is read through `editorInfoField` when Obsidian exposes it, otherwise through the active file: an unfocused hover editor may then be judged on the path of the note beneath it.
 - A search for `mot ;` with an ordinary space will no longer find anything.
 - Detection can be wrong on a short line that mixes two languages; the `smart-typo` property then decides for the whole note.

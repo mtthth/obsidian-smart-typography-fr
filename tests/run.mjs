@@ -23,7 +23,7 @@ const { detectLanguage, defaultLangOptions } = await import(pathToFileURL(path.j
 const { revertField, rewriteInput, rewriteSpec } = await import(pathToFileURL(path.join(out, "inputRewrite.mjs")).href);
 const { EditorSelection, EditorState } = await import("@codemirror/state");
 const { FINE, NBSP, THIN, frenchColonRules, frenchGuillemetRules, frenchPercentRules, frenchStopRules } = await import(pathToFileURL(path.join(out, "frenchRules.mjs")).href);
-const { dashRules, fractionRules, ruleApplies } = await import(pathToFileURL(path.join(out, "inputRules.mjs")).href);
+const { arrowRules, dashRules, dashRulesSansEnDash, fractionRules, ruleApplies } = await import(pathToFileURL(path.join(out, "inputRules.mjs")).href);
 
 // Anciens interrupteurs français, traduits en réglages par langue.
 const settings = (over = {}) => {
@@ -38,6 +38,8 @@ const settings = (over = {}) => {
 		curlyQuotes: true,
 		ellipsis: true,
 		openSingle: "‘",
+		leftArrow: "←",
+		rightArrow: "→",
 		closeSingle: "’",
 		frenchSpacing: true,
 		langOptions: options,
@@ -385,6 +387,19 @@ typing(frenchStopRules, "voir example.com/page", "?", "voir example.com/page?", 
 typing(frenchStopRules, "voir www.exemple.fr", "?", "voir www.exemple.fr?", "URL en www");
 typing(frenchPercentRules, "50", "%", `50${NBSP}%`, "insécable avant %");
 typing(frenchPercentRules, "https://x.org/fichier1", "%", "https://x.org/fichier1%", "% d'une URL encodée");
+typing(dashRules, "a -", "-", "a –", "tiret demi-cadratin");
+typing(dashRules, "a –", "-", "a —", "tiret cadratin");
+typing(dashRules, "<!", "-", "<!-", "ouverture d'un commentaire HTML (1)");
+typing(dashRules, "<!-", "-", "<!--", "ouverture d'un commentaire HTML (2)");
+typing(dashRulesSansEnDash, "<!-", "-", "<!--", "ouverture d'un commentaire HTML, sans demi-cadratin");
+typing(dashRules, "<!-- note -", "-", "<!-- note --", "fermeture d'un commentaire HTML");
+typing(dashRules, "<!--\nnote -", "-", "<!--\nnote --", "commentaire HTML sur plusieurs lignes");
+typing(arrowRules, "<!-- note --", ">", "<!-- note -->", "--> n'est pas une flèche");
+typing(arrowRules, "a -", ">", "a →", "flèche");
+typing(dashRules, "<!-- a -->\nb -", "-", "<!-- a -->\nb –", "tiret après un commentaire fermé");
+typing(dashRules, "| -", "-", "| --", "séparateur de tableau (1)");
+typing(dashRules, "| :--", "-", "| :---", "séparateur de tableau (2)");
+typing(dashRules, "| a | b |\n|---|-", "-", "| a | b |\n|---|--", "séparateur de tableau, colonne suivante");
 typing(fractionRules, "le 1/", "2", "le ½", "fraction ½");
 typing(fractionRules, "le 1/1", "0", "le ⅒", "fraction ⅒");
 typing(fractionRules, "1/1", "0", "⅒", "fraction ⅒ en début de document");

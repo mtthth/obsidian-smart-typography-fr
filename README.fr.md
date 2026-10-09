@@ -229,7 +229,13 @@ signalées à tort. Ce repère est fourni par
 - **Les règles de saisie ne s'appliquent pas au texte déjà écrit** : pour cela, la commande de correction de la sélection.
 - Dataview : `champ:: valeur` reçoit une insécable sur le premier `:` et
   casse le champ. Désactivez l'option deux-points si vous en posez.
-- URL sans schéma (`www.exemple.fr/x?y=1`) : le `?` reçoit une fine.
+- Une URL sans schéma n'est reconnue qu'à partir de `www.` ou d'un domaine
+  suivi d'un chemin (`exemple.fr/x?y=1`) : `exemple.fr?y=1` reçoit encore une
+  fine.
+- En début de ligne, `---` donne un tiret cadratin, pour les dialogues ; un
+  quatrième `-` rend `---` (métadonnées, filet, tableau sans bordure). Les
+  tirets sont laissés dans un commentaire HTML (`<!-- … -->`) et après le `|`
+  d'un tableau.
 - La portée est lue via `editorInfoField` quand Obsidian l'expose, sinon
   via le fichier actif — un éditeur en survol non focalisé peut alors être
   jugé sur le chemin de la note de dessous.
