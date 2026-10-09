@@ -26,6 +26,7 @@ import {
   ellipsisRules,
   fractionRules,
   guillemetRules,
+  ruleApplies,
   smartQuoteRules,
 } from "inputRules";
 import {
@@ -426,6 +427,18 @@ export default class SmartTypography extends Plugin {
             return;
           }
 
+          // Fenetre de contexte en amont du caractere insere.
+          const before = (ctxLen: number) => {
+            const ctxKey = fromA + ":" + ctxLen;
+            if (contextCache[ctxKey] === undefined) {
+              contextCache[ctxKey] = tr.newDoc.sliceString(
+                Math.max(0, fromB - ctxLen),
+                fromB
+              );
+            }
+            return contextCache[ctxKey];
+          };
+
           for (let rule of matchedRules) {
             // If we're in a codeblock, etc, return early, no need to continue checking
             if (!canPerformReplacement(fromA)) return;
@@ -437,25 +450,7 @@ export default class SmartTypography extends Plugin {
               continue;
             }
 
-            // Fenetre de contexte en amont du caractere insere.
-            // 3 caracteres par defaut, plus si la regle le demande.
-            const ctxLen = rule.contextLength ?? 3;
-            const ctxKey = fromA + ":" + ctxLen;
-
-            if (contextCache[ctxKey] === undefined) {
-              contextCache[ctxKey] = tr.newDoc.sliceString(
-                Math.max(0, fromB - ctxLen),
-                fromB
-              );
-            }
-
-            const context = contextCache[ctxKey];
-
-            if (!rule.contextMatch.test(context)) {
-              continue;
-            }
-
-            if (rule.contextExclude && rule.contextExclude.test(context)) {
+            if (!ruleApplies(rule, before)) {
               continue;
             }
 

@@ -11,6 +11,18 @@ export interface InputRule {
   contextExclude?: RegExp;
 }
 
+// La regle s'applique-t-elle ? `before(n)` donne les n caracteres qui
+// precedent le caractere tape, moins en debut de document : un `^` du motif
+// s'ancre donc sur le debut de cette fenetre, pas sur celui de la ligne.
+export function ruleApplies(
+  rule: InputRule,
+  before: (length: number) => string
+): boolean {
+  const context = before(rule.contextLength ?? 3);
+  if (!rule.contextMatch.test(context)) return false;
+  return !rule.contextExclude || !rule.contextExclude.test(context);
+}
+
 // Dashes
 export const dashRules: InputRule[] = [
   // en dash

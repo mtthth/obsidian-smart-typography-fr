@@ -1,4 +1,4 @@
-// Tests des fonctions pures (fixTypography.ts, frenchRules.ts, languages.ts), sans Obsidian :
+// Tests des fonctions pures (fixTypography.ts, frenchRules.ts, inputRules.ts, languages.ts), sans Obsidian :
 // TypeScript, déjà présent, transpile les modules, dont les imports « nus »
 // (baseUrl) sont réécrits en chemins relatifs.
 import ts from "typescript";
@@ -10,17 +10,18 @@ const root = path.resolve(import.meta.dirname, "..");
 const out = path.join(root, "tests", ".tmp");
 mkdirSync(out, { recursive: true });
 
-for (const name of ["fixTypography", "frenchRules", "languages"]) {
+for (const name of ["fixTypography", "frenchRules", "inputRules", "languages"]) {
 	const source = readFileSync(path.join(root, `${name}.ts`), "utf8");
 	const js = ts.transpileModule(source, {
 		compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 },
-	}).outputText.replace(/from "(frenchRules|fixTypography|languages)"/g, 'from "./$1.mjs"');
+	}).outputText.replace(/from "(frenchRules|fixTypography|inputRules|languages)"/g, 'from "./$1.mjs"');
 	writeFileSync(path.join(out, `${name}.mjs`), js);
 }
 
 const { applyTypography, findFaultySigns, noteTypo, touchesCaret } = await import(pathToFileURL(path.join(out, "fixTypography.mjs")).href);
 const { detectLanguage, defaultLangOptions } = await import(pathToFileURL(path.join(out, "languages.mjs")).href);
-const { FINE, NBSP, THIN } = await import(pathToFileURL(path.join(out, "frenchRules.mjs")).href);
+const { FINE, NBSP, THIN, frenchColonRules } = await import(pathToFileURL(path.join(out, "frenchRules.mjs")).href);
+const { ruleApplies } = await import(pathToFileURL(path.join(out, "inputRules.mjs")).href);
 
 // Anciens interrupteurs français, traduits en réglages par langue.
 const settings = (over = {}) => {
@@ -322,6 +323,23 @@ signsIn("es", "¡Hola! ¿Qué tal? Sí.", [], "ouvrants présents");
 check("repérage ligne à ligne",
 	findFaultySigns("Il a dit qu’il viendrait, mais il n’est pas venu ?\nI don’t know what to do with this ?", settings(), { forced: null, fallback: "fr" }).map(({ reason, lang }) => [reason, lang]),
 	[["nbsp", "fr"], ["no-space", "en"]]);
+
+section("Saisie");
+// Texte obtenu en tapant `char` après `before` : la première règle qui
+// s'applique remplace la fin de `before`, comme dans main.ts.
+const typed = (rules, before, char) => {
+	const rule = rules.find((r) => r.trigger === char && ruleApplies(r, (n) => before.slice(Math.max(0, before.length - n))));
+	if (!rule) return before + char;
+	const to = typeof rule.to === "string" ? rule.to : rule.to(settings());
+	return before.slice(0, before.length - (rule.from.length - rule.trigger.length)) + to;
+};
+const typing = (rules, before, char, expected, name) => check(name, typed(rules, before, char), expected);
+typing(frenchColonRules, "Attention ", ":", `Attention${NBSP}:`, "deux-points après une espace");
+typing(frenchColonRules, "Attention", ":", `Attention${NBSP}:`, "deux-points collé");
+typing(frenchColonRules, "| ", ":", "| :", "alignement d'une colonne de tableau");
+typing(frenchColonRules, "| Nom | ", ":", "| Nom | :", "alignement d'une colonne suivante");
+typing(frenchColonRules, "a | ", ":", "a | :", "alignement d'un tableau sans bordure");
+typing(frenchColonRules, "12", ":", "12:", "heure épargnée");
 
 if (failures.length === 0) {
 	console.log("\nTous les tests passent.");

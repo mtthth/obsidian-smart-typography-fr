@@ -129,7 +129,8 @@ export const frenchColonRules: InputRule[] = [
     to: (s) => s.frNbSpace + ":",
     contextMatch: AFTER_SPACE,
     contextLength: 24,
-    contextExclude: /[:/\\]\s$/,
+    // Ni « C: \ », ni l'alignement d'une colonne de tableau : « | :--- ».
+    contextExclude: /[:/\\|]\s$/,
   },
   {
     trigger: ":",
