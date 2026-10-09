@@ -20,7 +20,7 @@ for (const name of ["fixTypography", "frenchRules", "inputRules", "inputRewrite"
 
 const { applyTypography, findFaultySigns, noteTypo, touchesCaret } = await import(pathToFileURL(path.join(out, "fixTypography.mjs")).href);
 const { detectLanguage, defaultLangOptions } = await import(pathToFileURL(path.join(out, "languages.mjs")).href);
-const { rewriteInput } = await import(pathToFileURL(path.join(out, "inputRewrite.mjs")).href);
+const { revertField, rewriteInput, rewriteSpec } = await import(pathToFileURL(path.join(out, "inputRewrite.mjs")).href);
 const { EditorSelection, EditorState } = await import("@codemirror/state");
 const { FINE, NBSP, THIN, frenchColonRules, frenchGuillemetRules, frenchPercentRules, frenchStopRules } = await import(pathToFileURL(path.join(out, "frenchRules.mjs")).href);
 const { dashRules, fractionRules, ruleApplies } = await import(pathToFileURL(path.join(out, "inputRules.mjs")).href);
@@ -421,6 +421,22 @@ typingAt(dashRules, "x|y a-|", "-", ["x-|y a–|", "x-|y a--|"], "un curseur ava
 typingAt(dashRules, "a-[xyz]", "-", ["a–|", "a--|"], "la sélection remplacée par la frappe est effacée");
 typingAt(frenchStopRules, "Quoi |\nEt|", "?", [`Quoi${FINE}?|\nEt${FINE}?|`, "Quoi ?|\nEt?|"], "règles françaises, retour arrière au texte tapé");
 check("aucune règle : la frappe reste telle quelle", typeAt(dashRules, "a|\nb|", "-"), null);
+
+section("Retour arrière");
+// « a- » puis « - » : la réécriture « a– » mémorise de quoi revenir à « a-- ».
+const rewritten = (() => {
+	const state = EditorState.create({ doc: "a-", selection: EditorSelection.cursor(2), extensions: revertField });
+	const tr = state.update({ ...state.replaceSelection("-"), userEvent: "input.type" });
+	const rule = dashRules.find((r) => ruleApplies(r, (n) => tr.newDoc.sliceString(Math.max(0, 2 - n), 2)));
+	return state.update(rewriteSpec(tr, rewriteInput(tr, () => ({ rule, insert: rule.to })))).state;
+})();
+const revert = (s) => s.field(revertField);
+check("réécriture mémorisée", rewritten.doc.toString() + " / " + rewritten.update(revert(rewritten)).state.doc.toString(), "a– / a--");
+check("annulation consommée par le retour arrière", revert(rewritten.update(revert(rewritten)).state), null);
+check("transaction sans changement : annulation gardée", revert(rewritten.update({}).state) !== null, true);
+check("texte modifié sans événement utilisateur (synchro) : annulation périmée",
+	revert(rewritten.update({ changes: { from: 0, insert: "Titre\n" } }).state), null);
+check("curseur déplacé : annulation périmée", revert(rewritten.update({ selection: EditorSelection.cursor(0) }).state), null);
 
 if (failures.length === 0) {
 	console.log("\nTous les tests passent.");

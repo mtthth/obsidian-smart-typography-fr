@@ -8,9 +8,33 @@
 import {
   ChangeSpec,
   EditorSelection,
+  StateEffect,
+  StateField,
   Transaction,
+  TransactionSpec,
 } from "@codemirror/state";
 import { InputRule } from "inputRules";
+
+// Frappe réécrite, mémorisée pour que le retour arrière qui la suit la défasse.
+const storeRevert = StateEffect.define<TransactionSpec | null>();
+
+export const revertField = StateField.define<TransactionSpec | null>({
+  create() {
+    return null;
+  },
+  update(value, tr) {
+    for (const e of tr.effects) {
+      if (e.is(storeRevert)) return e.value;
+    }
+    // Toute autre modification du texte, de l'utilisateur ou non (synchro,
+    // autre plugin), ou un curseur déplacé la périment : ses positions ne
+    // tiennent plus.
+    if (!value || tr.docChanged || !tr.newSelection.eq(tr.startState.selection)) {
+      return null;
+    }
+    return value;
+  },
+});
 
 // Règle retenue pour un changement, et le texte qu'elle insère.
 export interface RuleMatch {
@@ -80,4 +104,20 @@ export function rewriteInput(
     tr.newSelection.mainIndex
   );
   return { changes, selection, reverts };
+}
+
+// Transaction qui remplace la frappe par sa réécriture, et mémorise dans
+// revertField de quoi revenir à la frappe.
+export function rewriteSpec(tr: Transaction, rewrite: InputRewrite): TransactionSpec {
+  return {
+    effects: storeRevert.of({
+      effects: storeRevert.of(null),
+      selection: tr.newSelection,
+      scrollIntoView: tr.scrollIntoView,
+      changes: rewrite.reverts,
+    }),
+    selection: rewrite.selection,
+    scrollIntoView: tr.scrollIntoView,
+    changes: rewrite.changes,
+  };
 }

@@ -9,12 +9,7 @@ import {
   TFile,
 } from "obsidian";
 import * as obsidianApi from "obsidian";
-import {
-  EditorState,
-  StateEffect,
-  StateField,
-  TransactionSpec,
-} from "@codemirror/state";
+import { EditorState } from "@codemirror/state";
 import {
   InputRule,
   arrowRules,
@@ -50,7 +45,7 @@ import {
 import { Extension } from "@codemirror/state";
 import { TYPO_KEY, applyTypography, noteTypo } from "fixTypography";
 import { createSpacingMarkerPlugin, noteTypoOf } from "spacingMarkers";
-import { rewriteInput } from "inputRewrite";
+import { revertField, rewriteInput, rewriteSpec } from "inputRewrite";
 import {
   LANGS,
   Lang,
@@ -317,38 +312,10 @@ export default class SmartTypography extends Plugin {
 
     // Codemirror 6
     //
-    // When smart typography overrides changes, we want to keep a record
+    // When smart typography overrides changes, revertField keeps a record
     // so we can undo them when the user presses backspace
-    const storeTransaction = StateEffect.define<TransactionSpec>();
-    const prevTransactionState = StateField.define<TransactionSpec | null>({
-      create() {
-        return null;
-      },
-      update(oldVal, tr) {
-        for (let e of tr.effects) {
-          if (e.is(storeTransaction)) {
-            return e.value;
-          }
-        }
-
-        if (
-          !oldVal ||
-          tr.isUserEvent("input") ||
-          tr.isUserEvent("delete.forward") ||
-          tr.isUserEvent("delete.cut") ||
-          tr.isUserEvent("move") ||
-          tr.isUserEvent("select") ||
-          tr.isUserEvent("undo")
-        ) {
-          return null;
-        }
-
-        return oldVal;
-      },
-    });
-
     this.registerEditorExtension([
-      prevTransactionState,
+      revertField,
       EditorState.transactionFilter.of((tr) => {
         // Hors des dossiers selectionnes : on ne touche a rien
         if (!this.isPathInScope(this.currentFilePath(tr.startState))) {
@@ -360,7 +327,7 @@ export default class SmartTypography extends Plugin {
           tr.isUserEvent("delete.backward") ||
           tr.isUserEvent("delete.selection")
         ) {
-          return tr.startState.field(prevTransactionState, false) || tr;
+          return tr.startState.field(revertField, false) || tr;
         }
 
         // If the user hasn't typed, or the doc hasn't changed, return early
@@ -453,19 +420,7 @@ export default class SmartTypography extends Plugin {
         // reverts it on backspace
         const rewrite = rewriteInput(tr, ruleAt);
         if (rewrite) {
-          return [
-            {
-              effects: storeTransaction.of({
-                effects: storeTransaction.of(null),
-                selection: tr.newSelection,
-                scrollIntoView: tr.scrollIntoView,
-                changes: rewrite.reverts,
-              }),
-              selection: rewrite.selection,
-              scrollIntoView: tr.scrollIntoView,
-              changes: rewrite.changes,
-            },
-          ];
+          return [rewriteSpec(tr, rewrite)];
         }
 
         return tr;
