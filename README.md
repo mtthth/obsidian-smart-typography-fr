@@ -57,6 +57,7 @@ It is an explicit command: it does not depend on the folder scope, nor on the "S
 | `« citation »` | narrow spaces inside the guillemets |
 | `Il a dit "bonjour"` | paired straight quotes → `« bonjour »` |
 | `l'été` | typographic apostrophe (if "Curly Quotes" is on) |
+| `dit 'oui'` | single quotes `‘oui’` when the quote opens a word and another closes it (if "Curly Quotes" is on); otherwise apostrophes (`’90s`) |
 | `Ah...` | ellipsis `Ah…` (if "Ellipsis" is on) |
 | `mot , suite` | stray space before the comma removed |
 | `enfin(frf)` | space added before the parenthesis (except `chat(s)`, `allié(e)`) |
@@ -65,7 +66,7 @@ It is an explicit command: it does not depend on the folder scope, nor on the "S
 | `Fin. ` or `A, ` at the end of a line | trailing spaces removed (two spaces after a word, a Markdown line break, are kept) |
 | a line made of spaces | spaces removed |
 
-The command is idempotent: running it again on text that is already fixed changes nothing. It never touches code blocks and spans, formulas, links and embeds, URLs, HTML tags, reference and footnote definitions (`[ref]: url`, `[^1]: text`), comments (`%% ... %%`), nor the front matter when the selection starts with it. Ambiguous cases are left as they are: `12:30`, `key:: value` (Dataview), `C:\folder`, `:)` and unpaired straight quotes (`5"`).
+The command is idempotent: running it again on text that is already fixed changes nothing. It never touches code blocks and spans, formulas, links and embeds, URLs, HTML tags, reference and footnote definitions (`[ref]: url`, `[^1]: text`), comments (`%% ... %%`), nor the front matter when the selection starts with it. Ambiguous cases are left as they are: `12:30`, `key:: value` (Dataview), `C:\folder`, `:)` and unpaired straight quotes (`5"`), even next to a pair (`5" and "this"`).
 
 A `!` or `?` placed right after a protected portion (`` `code` ! ``) does not get its space, for lack of context. And selecting the inside of a front matter block *without* its opening `---` makes the command lose the one clue that tells it so: the `key: value` lines then get a non-breaking space.
 

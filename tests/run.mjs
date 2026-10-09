@@ -37,6 +37,7 @@ const settings = (over = {}) => {
 	return {
 		curlyQuotes: true,
 		ellipsis: true,
+		openSingle: "‘",
 		closeSingle: "’",
 		frenchSpacing: true,
 		langOptions: options,
@@ -110,6 +111,12 @@ check("« --- » hors du début de la note : un séparateur, pas des métadonné
 check("repérage d'une tranche qui s'ouvre sur un séparateur « --- »",
 	findFaultySigns("---\nQuoi ?\n---\nEt ?", settings(), FR, false).map(({ pos, reason }) => [pos, reason]), [[9, "nbsp"], [18, "nbsp"]]);
 unchanged('Il mesure 5" de haut', "guillemet droit non apparié");
+typo('Il mesure 5" et dit "bonjour"', `Il mesure 5" et dit «${FINE}bonjour${FINE}»`, "guillemet de mesure puis paire : seule la paire est convertie");
+typo('dit "oui" et 5" ici', `dit «${FINE}oui${FINE}» et 5" ici`, "paire puis guillemet de mesure");
+typo('*"Titre"* et ("cité").', `*«${FINE}Titre${FINE}»* et («${FINE}cité${FINE}»).`, "guillemets dans l'emphase et entre parenthèses");
+unchanged('un "mot"de', "guillemet suivi d'une lettre : pas un fermant");
+typo("Il dit : 'non' et 'oui'", `Il dit${NBSP}: ‘non’ et ‘oui’`, "guillemets simples ouvrants et fermants");
+typo("'J'ai dit', fit-il, l 'été", "‘J’ai dit’, fit-il, l’été", "apostrophe dans une citation, élision avec une espace");
 unchanged("mot\n? question", "aucune fusion de lignes");
 unchanged('<span title="a ; b">x</span>', "balise HTML");
 unchanged("> [!NOTE] Attention", "marqueur de callout");
@@ -223,7 +230,7 @@ typo("enfin(frf) certaine ;l ’ obscurité. \n", `enfin (frf) certaine${FINE}; 
 unchanged("chat(s) et allié(es)", "marque du pluriel ou du féminin épargnée");
 typo("a\n   \nb", "a\n\nb", "espaces seules sur une ligne vide");
 typo("a\n \nb", "a\n\nb", "une seule espace sur une ligne vide");
-typo("certaine ; l’ obscurité et l ’obscurité, dit 'oui' à", `certaine${FINE}; l’obscurité et l’obscurité, dit ’oui’ à`, "espace d'un seul côté de l'élision");
+typo("certaine ; l’ obscurité et l ’obscurité, dit 'oui' à", `certaine${FINE}; l’obscurité et l’obscurité, dit ‘oui’ à`, "espace d'un seul côté de l'élision");
 check("repérage de l'élision d'un seul côté", findFaultySigns("l’ o et l ’o", settings(), FR).map(({ pos, side }) => [pos, side]), [[1, "after"], [10, "before"]]);
 unchanged("fin  \nsuite", "saut de ligne Markdown laissé");
 typo("Fin.  \nsuite", "Fin.\nsuite", "plusieurs espaces après une fin de phrase");
@@ -269,6 +276,10 @@ typoIn("en", "Hello ! How are you ?", "Hello! How are you?", "pas d'espace avant
 typoIn("en", "Note : see ; here", "Note: see; here", "pas d'espace avant : ;");
 typoIn("en", "Hi :) and | :--- |", "Hi :) and | :--- |", "émoticône et alignement de tableau épargnés");
 typoIn("en", 'Say "hi", it\'s 50 %', "Say “hi”, it’s 50%", "guillemets anglais, apostrophe, 50%");
+typoIn("en", 'Say "hi" and 12" more', 'Say “hi” and 12" more', "pouces épargnés");
+typoIn("en", "He said 'hello' to me", "He said ‘hello’ to me", "guillemets simples");
+typoIn("en", "'Hello,' she said. It's the '90s, 'tis true.", "‘Hello,’ she said. It’s the ’90s, ’tis true.", "guillemet simple en début de ligne, apostrophes initiales");
+typoIn("en", "**Bold**'s and `x`'s value 'a'", "**Bold**’s and `x`’s value ‘a’", "apostrophe après de l'emphase ou du code");
 typoIn("de", 'Er sagte "Hallo".', "Er sagte „Hallo“.", "guillemets allemands");
 typoIn("de", "Er sagte “Hallo”.", "Er sagte „Hallo“.", "guillemets anglais → allemands");
 typoIn("de", "z.B. 50%", `z.${FINE}B. 50${NBSP}%`, "abréviation et pourcentage");

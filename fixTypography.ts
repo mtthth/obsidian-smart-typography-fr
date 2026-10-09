@@ -352,6 +352,17 @@ const QUOTES: Record<Exclude<Lang, "fr">, [string, string]> = {
   es: ["«", "»"],
 };
 
+// A straight quote opens at the start of a word: at the start of the line, or
+// after a space, an opening bracket, a dash or a slash, emphasis included
+// (`*"word"*`). It closes at the end of a word, before a space, punctuation,
+// a closing bracket or emphasis. `5" and "this"` only pairs the last two.
+const QUOTE_OPENS = "(?<=(?:^|[\\s(\\[{—–/-])[*_~=]*)";
+const QUOTE_CLOSES = "(?![^\\s.,;:!?…)\\]}*_~=—–/-])";
+// A single straight quote that opens a word is an opening quote when another
+// one closes it on the line, with no other opening quote in between: `’90s`,
+// `’tis`, or `’s` right after inline code, stay apostrophes.
+const SINGLE_QUOTED = `${QUOTE_OPENS}'(?=${LETTER})((?:(?!\\s')[^\\n])*?\\S)'(?!${LETTER}|\\d)`;
+
 // Tiret qui remplace un trait d'union entre espaces.
 const DASHES: Record<Lang, string> = {
   fr: "–",
@@ -387,17 +398,22 @@ function rulesFor(s: SmartTypographySettings, lang: Lang): TypoRule[] {
   if (o.quotes && (lang === "fr" || s.curlyQuotes)) {
     const [open, close] =
       lang === "fr" ? [`«${fine}`, `${fine}»`] : QUOTES[lang];
-    rule('"([^"\\n]*)"', `${open}$1${close}`);
+    rule(`${QUOTE_OPENS}"([^"\\n]*)"${QUOTE_CLOSES}`, `${open}$1${close}`);
   }
   if (lang === "de" && o.quotes) rule("“([^”\\n]*)”", "„$1“");
   if (lang === "it" && o.special) rule(`(?<!${LETTER})E['’](?=${H})`, "È");
-  if (o.quotes && s.curlyQuotes) rule("'", s.closeSingle);
+  // Elision first: once « l 'obscurité » is joined, its apostrophe no longer
+  // opens a word.
   if (o.general) {
     // Apostrophe d'élision isolée entre deux espaces : « l ’ obscurité ».
     rule(`(${LETTER})${H}+(['’])${H}+(?=${LETTER})`, "$1$2");
     // Une seule espace, après ou avant un mot d'élision : « l’ obscurité », « l ’obscurité ».
     rule(`(${ELISION}['’])${H}+(?=${LETTER})`, "$1");
     rule(`(${ELISION})${H}+(?=['’]${LETTER})`, "$1");
+  }
+  if (o.quotes && s.curlyQuotes) {
+    rule(SINGLE_QUOTED, `${s.openSingle}$1${s.closeSingle}`);
+    rule("'", s.closeSingle);
   }
   if (s.ellipsis) rule("\\.\\.\\.", "…");
 

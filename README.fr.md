@@ -97,6 +97,7 @@ de l'interrupteur « Espaces avant la ponctuation double ».
 | `« citation »` | espaces fines à l'intérieur des guillemets |
 | `Il a dit "bonjour"` | guillemets droits appariés → `« bonjour »` |
 | `l'été` | apostrophe typographique (si « Guillemets courbes » est actif) |
+| `dit 'oui'` | guillemets simples `‘oui’` quand l'apostrophe ouvre un mot et qu'une autre la referme (si « Guillemets courbes » est actif) ; sinon apostrophes (`’90s`) |
 | `Ah...` | points de suspension `Ah…` (si « Points de suspension » est actif) |
 | `mot , suite` | espace parasite avant la virgule supprimée |
 | `enfin(frf)` | espace ajoutée avant la parenthèse (sauf `chat(s)`, `allié(e)`) |
@@ -111,7 +112,8 @@ liens et images intégrées, aux URL, aux balises HTML, aux définitions de
 référence et de note (`[ref]: url`, `[^1]: texte`), aux commentaires
 (`%% ... %%`), ni au bloc de métadonnées quand la sélection commence par lui.
 Les cas ambigus sont laissés tels quels : `12:30`, `clé:: valeur` (Dataview),
-`C:\dossier`, `:)` et les guillemets droits non appariés (`5"`).
+`C:\dossier`, `:)` et les guillemets droits non appariés (`5"`), même à côté
+d'une paire (`5" et "ceci"`).
 
 Un `!` ou `?` placé juste après une portion protégée (`` `code` ! ``) ne reçoit
 pas son espace, faute de contexte. Et sélectionner l'intérieur d'un bloc de
